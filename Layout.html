@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>采购云 · 折让版本交互原型</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.13.7/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" />
+  <link rel="stylesheet" href="./_shared/Shared.css" />
+  <link rel="stylesheet" href="./_shared/Layout.css" />
+</head>
+<body>
+  <div id="app" v-cloak></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.32/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/element-plus@2.13.7/dist/index.full.min.js"></script>
+  <script src="./_shared/prototype-core.js"></script>
+  <script src="./_shared/prototype-menu.js"></script>
+  <script src="./_shared/prototype-data.js"></script>
+  <script src="./_shared/prototype-route.js"></script>
+  <script src="./_shared/prototype-components.js"></script>
+  <script src="./_shared/prototype-shell.js"></script>
+
+  <!-- module route scripts start -->
+  <script src="./modules/rebate/accrual-version-list.js"></script>
+  <script src="./modules/rebate/accrual-detail.js"></script>
+  <script src="./modules/rebate/accrual-create.js"></script>
+  <script src="./modules/rebate/settlement-version-list.js"></script>
+  <script src="./modules/rebate/settlement-create.js"></script>
+  <script src="./modules/rebate/settlement-detail.js"></script>
+  <script src="./modules/rebate/reconciliation-demo.js"></script>
+  <!-- module route scripts end -->
+
+  <script>
+    ChintPrototypeShell.bootstrap({
+      dataUrl: './data.json',
+      mountSelector: '#app',
+      onDataLoaded(mockData) {
+        ChintPrototypeShell.setMenus((mockData.app && mockData.app.menus) || []);
+      },
+      appOptions(mockData) {
+        const appData = mockData.app || {};
+        return {
+          brandName: appData.brandName,
+          brandIcon: appData.brandIcon,
+          fallbackRoute: appData.fallbackRoute || '#/rebate/accruals',
+          menuSwitcher: null,
+          tenant: null,
+          user: appData.user || {},
+          messages: appData.messages || []
+        };
+      }
+    }).catch(() => {});
+  </script>
+</body>
+</html>

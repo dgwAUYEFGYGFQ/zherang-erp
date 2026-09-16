@@ -1,0 +1,171 @@
+{
+  "manifestVersion": "1.0.0",
+  "generatedAt": "2026-09-16T18:25:42+08:00",
+  "updatedBy": "C.UI-Prototype-Editor",
+  "project": {
+    "brandName": "采购云 · 折让管理",
+    "brandIcon": "ri-file-list-3-line",
+    "entry": "docs/prototypes/Layout.html#/rebate/accruals",
+    "fallbackRoute": "#/rebate/accruals",
+    "routeCount": 7,
+    "moduleCount": 1,
+    "usesECharts": false,
+    "usesTenant": false,
+    "usesMenuSwitcher": false
+  },
+  "modules": [
+    {
+      "moduleName": "折让管理",
+      "slug": "rebate",
+      "icon": "ri-file-list-3-line",
+      "menuKey": "rebateAccruals",
+      "entryRoute": "#/rebate/accruals",
+      "crossModuleTargets": ["#/rebate/reconciliation-demo"],
+      "routes": [
+        {
+          "path": "#/rebate/accruals",
+          "name": "计提单管理",
+          "menuKey": "rebateAccruals",
+          "component": "RebateAccrualVersionListPage",
+          "componentFile": "docs/prototypes/modules/rebate/accrual-version-list.js",
+          "templateId": "query-table-list-page",
+          "archetype": "查询表格列表页",
+          "breadcrumbs": ["折让管理", "计提单管理"],
+          "tabInfo": "帮助采购结算专员筛选计提单并进入独立详情页维护编辑稿、核对SAP生效版本与历史快照。",
+          "guideStepCount": 3,
+          "noteSectionTitles": ["业务目标", "版本状态流转", "上下游关系", "关键业务规则"],
+          "dataKeys": ["rebateAccruals"],
+          "linkedBusinessObjects": ["计提单", "SAP同步版本", "收货记录"],
+          "outboundRoutes": ["#/rebate/accrual-detail", "#/rebate/accrual-create"],
+          "keyInteractions": ["关键词与状态筛选", "新增计提单进入独立创建页", "点击计提单进入独立详情页", "分页浏览"]
+        },
+        {
+          "path": "#/rebate/accrual-detail",
+          "name": "计提单详情",
+          "menuKey": "rebateAccrualDetail",
+          "component": "RebateAccrualDetailPage",
+          "componentFile": "docs/prototypes/modules/rebate/accrual-detail.js",
+          "templateId": "query-table-list-page",
+          "archetype": "全页业务详情（沿用查询表格视觉基线）",
+          "breadcrumbs": ["折让管理", "计提单管理", "计提单详情"],
+          "tabInfo": "帮助采购结算专员在完整详情页维护计提编辑稿、核对SAP生效版本并追溯正式版本快照。",
+          "guideStepCount": 5,
+          "noteSectionTitles": ["业务目标", "版本快照查看规则", "状态流转", "上下游关系", "关键规则"],
+          "dataKeys": ["rebateAccruals"],
+          "linkedBusinessObjects": ["计提单", "编辑稿", "SAP生效版本", "正式版本快照", "收货记录"],
+          "outboundRoutes": ["#/rebate/accruals"],
+          "keyInteractions": ["编辑稿与SAP生效版本切换", "可编辑折让比例", "获取最新收货记录并逐行重算", "V1至V5完整快照切换", "全屏差异对比", "提交SAP生成V6"]
+        },
+        {
+          "path": "#/rebate/accrual-create",
+          "name": "新增计提单",
+          "menuKey": "rebateAccrualCreate",
+          "component": "RebateAccrualCreatePage",
+          "componentFile": "docs/prototypes/modules/rebate/accrual-create.js",
+          "templateId": "query-table-list-page",
+          "archetype": "全页业务创建（沿用查询表格视觉基线）",
+          "breadcrumbs": ["折让管理", "计提单管理", "新增计提单"],
+          "tabInfo": "帮助采购结算专员新建玻璃计提单、获取收货记录、填写折让比例并保存草稿或同步SAP。",
+          "guideStepCount": 5,
+          "noteSectionTitles": ["业务目标", "创建流程", "上下游关系", "关键规则"],
+          "dataKeys": ["rebateAccruals"],
+          "linkedBusinessObjects": ["计提单", "收货记录", "折让比例", "SAP正式版本"],
+          "outboundRoutes": ["#/rebate/accruals"],
+          "keyInteractions": ["三列新建表单", "按年月与玻璃品类获取收货记录", "折让比例实时重算", "保存草稿生成单号", "提交SAP生成V1"]
+        },
+        {
+          "path": "#/rebate/settlements",
+          "name": "结算单管理",
+          "menuKey": "rebateSettlements",
+          "component": "RebateSettlementVersionListPage",
+          "componentFile": "docs/prototypes/modules/rebate/settlement-version-list.js",
+          "templateId": "query-table-list-page",
+          "archetype": "查询表格列表页",
+          "breadcrumbs": ["折让管理", "结算单管理"],
+          "tabInfo": "帮助采购结算专员查询结算单，并分别识别SAP同步、SAP结算和对账占用状态。",
+          "guideStepCount": 4,
+          "noteSectionTitles": ["业务目标", "状态流转", "上下游关系", "关键规则"],
+          "dataKeys": ["rebateSettlements"],
+          "linkedBusinessObjects": ["结算单", "计提单", "SAP同步版本", "对账占用"],
+          "outboundRoutes": ["#/rebate/settlement-create", "#/rebate/settlement-detail", "#/rebate/reconciliation-demo"],
+          "keyInteractions": ["按结算年月、公司、供应商和三类状态筛选", "新增结算单进入独立创建页", "详情与编辑进入完整详情页", "分别查看同步、SAP结算、占用状态"]
+        },
+        {
+          "path": "#/rebate/settlement-create",
+          "name": "新增结算单",
+          "menuKey": "rebateSettlementCreate",
+          "component": "RebateSettlementCreatePage",
+          "componentFile": "docs/prototypes/modules/rebate/settlement-create.js",
+          "templateId": "query-table-list-page",
+          "archetype": "独立业务表单页",
+          "breadcrumbs": ["折让管理", "结算单管理", "新增结算单"],
+          "tabInfo": "帮助采购结算专员匹配已同步计提单、获取收货记录并生成折让结算单。",
+          "guideStepCount": 4,
+          "noteSectionTitles": ["业务目标", "状态流转", "上下游关系", "关键规则"],
+          "dataKeys": ["rebateSettlements", "rebateAccruals"],
+          "linkedBusinessObjects": ["结算单", "计提单", "收货记录", "折让比例"],
+          "outboundRoutes": ["#/rebate/settlements"],
+          "keyInteractions": ["结算年月与计提年月分开选择", "按公司、供应商、玻璃和计提年月匹配计提单", "获取收货记录并保留负数", "保存生成S单号并提交SAP"]
+        },
+        {
+          "path": "#/rebate/settlement-detail",
+          "name": "结算单详情",
+          "menuKey": "rebateSettlementDetail",
+          "component": "RebateSettlementDetailPage",
+          "componentFile": "docs/prototypes/modules/rebate/settlement-detail.js",
+          "templateId": "query-table-list-page",
+          "archetype": "独立业务详情页",
+          "breadcrumbs": ["折让管理", "结算单管理", "结算单详情"],
+          "tabInfo": "帮助采购结算专员核对结算单编辑稿、SAP生效版本与历史失败版本，并处理重提。",
+          "guideStepCount": 4,
+          "noteSectionTitles": ["业务目标", "状态流转", "上下游关系", "关键规则"],
+          "dataKeys": ["rebateSettlements"],
+          "linkedBusinessObjects": ["结算单", "编辑稿", "SAP生效版本", "收货明细", "对账占用"],
+          "outboundRoutes": ["#/rebate/settlements"],
+          "keyInteractions": ["编辑稿、SAP版本和历史版本切换", "折让比例可编辑并逐行重算", "完整查看收货明细、面积和M²不含税单价", "SAP返回失败原因时保留编辑稿且不生成新正式版本"]
+        },
+        {
+          "path": "#/rebate/reconciliation-demo",
+          "name": "对账单附加费用演示",
+          "menuKey": "rebateReconciliationDemo",
+          "component": "RebateReconciliationDemoPage",
+          "componentFile": "docs/prototypes/modules/rebate/reconciliation-demo.js",
+          "templateId": "query-table-list-page",
+          "archetype": "对账确认业务页",
+          "breadcrumbs": ["对账管理", "对账单确认", "附加费用演示"],
+          "tabInfo": "帮助采购结算专员在对账单附加费用中选择、占用并随作废释放结算单。",
+          "guideStepCount": 4,
+          "noteSectionTitles": ["业务目标", "状态流转", "上下游关系", "关键规则"],
+          "dataKeys": ["rebateSettlements", "reconciliationDemo"],
+          "linkedBusinessObjects": ["对账单", "附加费用", "结算单占用"],
+          "outboundRoutes": ["#/rebate/settlements"],
+          "keyInteractions": ["流水号打开结算单选择弹窗", "仅允许已同步且未占用结算单", "确认后占用并阻止其他对账单重复选择", "作废原对账单释放占用"]
+        }
+      ]
+    }
+  ],
+  "sharedAssets": {
+    "layoutFile": "docs/prototypes/Layout.html",
+    "dataFile": "docs/prototypes/data.json",
+    "styles": [
+      "docs/prototypes/_shared/Shared.css",
+      "docs/prototypes/_shared/Layout.css",
+      "docs/prototypes/theme/blue.css",
+      "docs/prototypes/theme/light.css",
+      "docs/prototypes/theme/dark.css"
+    ],
+    "runtimeScripts": [
+      "docs/prototypes/_shared/prototype-core.js",
+      "docs/prototypes/_shared/prototype-menu.js",
+      "docs/prototypes/_shared/prototype-data.js",
+      "docs/prototypes/_shared/prototype-route.js",
+      "docs/prototypes/_shared/prototype-components.js",
+      "docs/prototypes/_shared/prototype-shell.js"
+    ]
+  },
+  "qualitySnapshot": {
+    "routesMissingGuideSteps": [],
+    "routesMissingNoteSections": [],
+    "orphanedMenuKeys": []
+  }
+}
