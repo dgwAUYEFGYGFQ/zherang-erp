@@ -1,0 +1,115 @@
+/* ================================================================
+   dark.css — 深色主题
+   依赖 Element Plus 内置深色模式（html.dark 类 +
+   element-plus@2.13.7/theme-chalk/dark/css-vars.css 注入）。
+   本文件只覆盖原型专属 CSS 变量及少量外壳 DOM 深色样式修正。
+   应用时：添加 html.dark 类，并由 JS 注入 EP dark CSS；
+           prototype-theme-id = "dark"
+   ================================================================ */
+
+/* 顶栏与原型专属变量覆盖 */
+html.dark {
+  /* 主色调 — 深色下稍亮 */
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #1a2a3a;
+
+  /* 顶栏 — 深色 */
+  --prototype-topbar-bg: #1e2433;
+  --prototype-topbar-bg-2: #252d3f;
+  --prototype-topbar-border: #343d56;
+  --prototype-topbar-text: #dde3ee;
+  --prototype-topbar-text-secondary: #8d9ab0;
+  --prototype-topbar-icon: #b4bdce;
+  --prototype-topbar-hover: rgba(255, 255, 255, .09);
+  --prototype-topbar-divider: rgba(255, 255, 255, .14);
+  --prototype-topbar-accent: #ffffff;
+  --prototype-topbar-shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .25);
+  --prototype-topbar-brand-mark-bg: rgba(255, 255, 255, .1);
+  --prototype-topbar-brand-mark-border: rgba(255, 255, 255, .14);
+  --prototype-topbar-search-bg: rgba(255, 255, 255, .07);
+  --prototype-topbar-search-hover-bg: rgba(255, 255, 255, .11);
+  --prototype-topbar-search-focus-bg: rgba(255, 255, 255, .14);
+  --prototype-topbar-search-border: rgba(255, 255, 255, .12);
+  --prototype-topbar-search-hover-border: rgba(255, 255, 255, .2);
+  --prototype-topbar-btn-hover-color: #ffffff;
+
+  /* 表格 */
+  --prototype-table-zebra-bg: #1e2535;
+  --prototype-table-selected-bg: #1c3028;
+  --prototype-table-acted-bg: #1a2e48;
+
+  /* 阴影 */
+  --prototype-shadow-sm: 0 1px 2px rgba(0, 0, 0, .3), 0 1px 1px rgba(0, 0, 0, .2);
+  --prototype-shadow-md: 0 2px 8px rgba(0, 0, 0, .4), 0 1px 2px rgba(0, 0, 0, .3);
+  --prototype-surface-hover-shadow: 0 8px 20px rgba(64, 158, 255, .2), 0 2px 8px rgba(0, 0, 0, .3);
+}
+
+/* 已打开页签栏 */
+html.dark .opened-page-tabs-bar {
+  background: rgba(20, 24, 36, .97);
+}
+
+html.dark .opened-page-tab-shell {
+  background: #202638;
+  border-color: rgba(75, 90, 120, .38);
+}
+
+html.dark .opened-page-tab-shell:hover {
+  background: #262e42;
+  border-color: rgba(95, 125, 175, .55);
+}
+
+html.dark .opened-page-tab-shell.is-active {
+  background: #1e2433;
+}
+
+html.dark .opened-page-tab {
+  color: #7d8da4;
+}
+
+html.dark .opened-page-tab-shell.is-active .opened-page-tab {
+  color: #dde3ee;
+}
+
+html.dark .opened-page-tabs-more {
+  background: #202638;
+  border-color: rgba(75, 90, 120, .5);
+  color: #8d9ab0;
+}
+
+html.dark .opened-page-tabs-more:hover {
+  background: #262e42;
+  border-color: rgba(95, 125, 175, .7);
+}
+
+/* 侧边栏导航 */
+html.dark .nav-item {
+  color: #7e90a6;
+}
+
+html.dark .nav-item:hover {
+  background: rgba(64, 158, 255, .1);
+  color: #c8d0de;
+}
+
+html.dark .nav-item.is-active {
+  background: linear-gradient(90deg, rgba(64, 158, 255, .18) 0%, rgba(64, 158, 255, .28) 100%);
+  color: #79bbff;
+  box-shadow: inset 0 0 0 1px rgba(64, 158, 255, .22);
+}
+
+html.dark .nav-group-toggle {
+  color: #6b7d96;
+}
+
+html.dark .nav-group-toggle::before {
+  background: #3e5270;
+}
+
+html.dark .nav-group-toggle:hover {
+  background: rgba(64, 158, 255, .08);
+}

@@ -1,0 +1,62 @@
+/* ================================================================
+   blue.css — 蓝色主题（默认主题）
+   覆盖 :root 中与主题相关的 CSS 变量，还原为冷灰蓝配色。
+   应用时：移除 html.dark 类；prototype-theme-id = "blue"
+   ================================================================ */
+
+:root {
+  /* 主色调 */
+  --el-color-primary: #1f8fff;
+  --el-color-primary-light-3: #59acff;
+  --el-color-primary-light-5: #8ac5ff;
+  --el-color-primary-light-7: #b9ddff;
+  --el-color-primary-light-8: #d2ebff;
+  --el-color-primary-light-9: #eaf6ff;
+  --el-color-primary-dark-2: #156fcb;
+
+  /* 背景色 */
+  --el-bg-color-page: #edf4fb;
+  --el-bg-color: #ffffff;
+  --el-bg-color-overlay: #ffffff;
+
+  /* 边框色 */
+  --el-border-color: #d3dfeb;
+  --el-border-color-light: #dce6f1;
+  --el-border-color-lighter: #e7eef6;
+  --el-border-color-extra-light: #eff4f9;
+
+  /* 填充色 */
+  --el-fill-color: #eef4fa;
+  --el-fill-color-light: #f3f7fb;
+  --el-fill-color-lighter: #f8fbfe;
+  --el-fill-color-blank: #ffffff;
+
+  /* 文字色 */
+  --el-text-color-primary: #1f2733;
+  --el-text-color-regular: #4a5364;
+
+  /* 表格 */
+  --prototype-table-zebra-bg: #f6fbff;
+  --prototype-table-selected-bg: #e8f7ed;
+  --prototype-table-acted-bg: #dceeff;
+
+  /* 顶栏 */
+  --prototype-topbar-bg: #2f78c9;
+  --prototype-topbar-bg-2: #5a9ee6;
+  --prototype-topbar-border: #76afea;
+  --prototype-topbar-text: #f8fbff;
+  --prototype-topbar-text-secondary: #deedff;
+  --prototype-topbar-icon: #edf6ff;
+  --prototype-topbar-hover: rgba(255, 255, 255, .16);
+  --prototype-topbar-divider: rgba(255, 255, 255, .24);
+  --prototype-topbar-accent: #ffffff;
+  --prototype-topbar-shadow: 0 1px 0 rgba(54, 111, 183, .18), 0 4px 12px rgba(54, 111, 183, .16);
+  --prototype-topbar-brand-mark-bg: rgba(255, 255, 255, .16);
+  --prototype-topbar-brand-mark-border: rgba(255, 255, 255, .18);
+  --prototype-topbar-search-bg: rgba(255, 255, 255, .18);
+  --prototype-topbar-search-hover-bg: rgba(255, 255, 255, .24);
+  --prototype-topbar-search-focus-bg: rgba(255, 255, 255, .28);
+  --prototype-topbar-search-border: rgba(255, 255, 255, .2);
+  --prototype-topbar-search-hover-border: rgba(255, 255, 255, .3);
+  --prototype-topbar-btn-hover-color: #ffffff;
+}

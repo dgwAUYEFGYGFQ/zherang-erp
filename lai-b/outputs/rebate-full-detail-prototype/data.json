@@ -1,0 +1,264 @@
+{
+  "app": {
+    "brandName": "采购云 · 折让管理",
+    "brandIcon": "ri-file-list-3-line",
+    "fallbackRoute": "#/rebate/accruals",
+    "user": {
+      "name": "陈静怡",
+      "role": "采购结算专员"
+    },
+    "messages": [
+      {
+        "id": 1,
+        "time": "11:26",
+        "content": "计提单 A260916001 存在未同步至 SAP 的修改。",
+        "type": "warning"
+      }
+    ],
+    "menus": [
+      {
+        "title": "折让管理",
+        "items": [
+          {
+            "key": "rebateAccruals",
+            "label": "计提单管理",
+            "icon": "ri-file-list-3-line",
+            "route": "#/rebate/accruals"
+          },
+          {
+            "key": "rebateSettlements",
+            "label": "结算单管理",
+            "icon": "ri-bill-line",
+            "route": "#/rebate/settlements"
+          },
+          {
+            "key": "rebateReconciliationDemo",
+            "label": "对账单确认（演示）",
+            "icon": "ri-file-check-line",
+            "route": "#/rebate/reconciliation-demo"
+          }
+        ]
+      }
+    ]
+  },
+  "rebateAccruals": {
+    "categoryOptions": [
+      { "label": "玻璃", "value": "玻璃" }
+    ],
+    "statusOptions": [
+      { "label": "已同步", "value": "synced" },
+      { "label": "待重新提交", "value": "pending-resubmit" },
+      { "label": "重提失败", "value": "resubmit-failed" },
+      { "label": "同步失败", "value": "sync-failed" }
+    ],
+    "rows": [
+      {
+        "id": "A260916001",
+        "accrualMonth": "2026-09",
+        "category": "玻璃",
+        "companyCode": "CN01",
+        "supplier": "嘉兴光伏玻璃制造有限公司",
+        "currency": "CNY",
+        "status": "pending-resubmit",
+        "statusLabel": "待重新提交",
+        "syncStatus": "pending-resubmit",
+        "syncStatusLabel": "待重新提交",
+        "currentVersion": "V2",
+        "sapVersion": "V1",
+        "discountRate": 10,
+        "sapDiscountRate": 8,
+        "originalAmount": 1264830.56,
+        "discountAmount": 126483.06,
+        "sapDiscountAmount": 101186.44,
+        "afterAmount": 1138347.50,
+        "sapAfterAmount": 1163644.12,
+        "createdDate": "2026-09-16",
+        "saveDate": "2026-09-16",
+        "changedFields": 5,
+        "changedLines": 3,
+        "lastSyncTime": "2026-09-16 10:30",
+        "lastSyncUser": "陈静怡",
+        "lastModifiedTime": "2026-09-16 11:26",
+        "lastModifiedUser": "陈静怡"
+      },
+      {
+        "id": "A260915008",
+        "accrualMonth": "2026-08",
+        "category": "玻璃",
+        "companyCode": "CN01",
+        "supplier": "湖州新能源玻璃有限公司",
+        "currency": "CNY",
+        "status": "synced",
+        "statusLabel": "已同步",
+        "syncStatus": "synced",
+        "syncStatusLabel": "已同步",
+        "currentVersion": "V1",
+        "sapVersion": "V1",
+        "discountRate": 7.5,
+        "sapDiscountRate": 7.5,
+        "originalAmount": 896742.30,
+        "discountAmount": 67255.67,
+        "sapDiscountAmount": 67255.67,
+        "afterAmount": 829486.63,
+        "sapAfterAmount": 829486.63,
+        "changedFields": 0,
+        "changedLines": 0,
+        "lastSyncTime": "2026-09-15 16:42",
+        "lastSyncUser": "叶思远",
+        "lastModifiedTime": "2026-09-15 16:42",
+        "lastModifiedUser": "叶思远"
+      },
+      {
+        "id": "A260914006",
+        "accrualMonth": "2026-07",
+        "category": "玻璃",
+        "companyCode": "CN02",
+        "supplier": "安徽高透光伏材料有限公司",
+        "currency": "CNY",
+        "status": "resubmit-failed",
+        "statusLabel": "重提失败",
+        "syncStatus": "sync-failed",
+        "syncStatusLabel": "同步失败",
+        "currentVersion": "V3",
+        "sapVersion": "V2",
+        "discountRate": 9,
+        "sapDiscountRate": 8.5,
+        "originalAmount": 743218.48,
+        "discountAmount": 66889.66,
+        "sapDiscountAmount": 63173.57,
+        "afterAmount": 676328.82,
+        "sapAfterAmount": 680044.91,
+        "changedFields": 4,
+        "changedLines": 2,
+        "lastSyncTime": "2026-09-14 14:18",
+        "lastSyncUser": "周彦博",
+        "lastModifiedTime": "2026-09-16 09:07",
+        "lastModifiedUser": "周彦博"
+      }
+    ],
+    "receiptLines": [
+      {
+        "materialDoc": "5001847291",
+        "item": "0010",
+        "receiptDate": "2026-09-05",
+        "purchaseOrder": "4500862317",
+        "purchaseOrderItem": "00010",
+        "plant": "1101",
+        "material": "PVG-20-HC",
+        "materialName": "2.0mm高透光伏玻璃",
+        "quantity": 18420,
+        "unitPrice": 28.65,
+        "area": 18420,
+        "m2UnitPrice": 28.65,
+        "sapUnitPrice": 28.65,
+        "amount": 527733.00,
+        "discountAmount": 52773.30,
+        "sapDiscountAmount": 42218.64,
+        "afterAmount": 474959.70,
+        "sapAfterAmount": 485514.36,
+        "changeType": "修改"
+      },
+      {
+        "materialDoc": "5001861048",
+        "item": "0020",
+        "receiptDate": "2026-09-14",
+        "purchaseOrder": "4500862317",
+        "purchaseOrderItem": "00020",
+        "plant": "1101",
+        "material": "PVG-32-BF",
+        "materialName": "3.2mm背板玻璃",
+        "quantity": 12680,
+        "unitPrice": 31.42,
+        "area": 12680,
+        "m2UnitPrice": 31.42,
+        "sapUnitPrice": 31.42,
+        "amount": 398365.60,
+        "discountAmount": 39836.56,
+        "sapDiscountAmount": 31869.25,
+        "afterAmount": 358529.04,
+        "sapAfterAmount": 366496.35,
+        "changeType": "修改"
+      },
+      {
+        "materialDoc": "5001879562",
+        "item": "0010",
+        "receiptDate": "2026-09-26",
+        "purchaseOrder": "4500869480",
+        "purchaseOrderItem": "00010",
+        "plant": "1101",
+        "material": "PVG-20-AR",
+        "materialName": "2.0mm镀膜光伏玻璃",
+        "quantity": 11640,
+        "unitPrice": 29.41,
+        "area": 11640,
+        "m2UnitPrice": 29.41,
+        "sapUnitPrice": 29.41,
+        "amount": 342331.96,
+        "discountAmount": 34233.20,
+        "sapDiscountAmount": 27386.55,
+        "afterAmount": 308098.76,
+        "sapAfterAmount": 314945.41,
+        "changeType": "修改"
+      }
+    ]
+  },
+  "rebateSettlements": {
+    "categoryOptions": [{ "label": "玻璃", "value": "玻璃" }],
+    "syncStatusOptions": [
+      { "label": "草稿", "value": "draft" },
+      { "label": "已同步", "value": "synced" },
+      { "label": "待重新提交", "value": "pending-resubmit" },
+      { "label": "同步失败", "value": "sync-failed" }
+    ],
+    "occupancyStatusOptions": [
+      { "label": "未占用", "value": "available" },
+      { "label": "已占用", "value": "occupied" }
+    ],
+    "rows": [
+      {
+        "id": "S261105001", "settlementMonth": "2026-11", "accrualId": "A260916001", "accrualMonth": "2026-09",
+        "companyCode": "CN01", "supplier": "嘉兴光伏玻璃制造有限公司", "category": "玻璃", "currency": "CNY",
+        "syncStatus": "synced", "syncStatusLabel": "已同步",
+        "occupancyStatus": "available", "occupancyStatusLabel": "未占用", "occupancyBillNo": "", "sapVersion": "V1",
+        "originalAmount": 1264830.56, "discountRate": 6, "discountAmount": 75889.83, "afterAmount": 1188940.73,
+        "createdDate": "2026-11-05", "saveDate": "2026-11-05", "lastSyncTime": "2026-11-05 15:20", "lastSyncUser": "陈静怡", "hasDraft": false
+      },
+      {
+        "id": "S261104002", "settlementMonth": "2026-11", "accrualId": "A260915008", "accrualMonth": "2026-08",
+        "companyCode": "CN01", "supplier": "湖州新能源玻璃有限公司", "category": "玻璃", "currency": "CNY",
+        "syncStatus": "synced", "syncStatusLabel": "已同步",
+        "occupancyStatus": "occupied", "occupancyStatusLabel": "已占用", "occupancyBillNo": "DZ260916008", "sapVersion": "V1",
+        "originalAmount": 896742.30, "discountRate": 7.5, "discountAmount": 67255.67, "afterAmount": 829486.63,
+        "createdDate": "2026-11-04", "saveDate": "2026-11-04", "lastSyncTime": "2026-11-04 14:10", "lastSyncUser": "叶思远", "hasDraft": false
+      },
+      {
+        "id": "S261103003", "settlementMonth": "2026-10", "accrualId": "A260914006", "accrualMonth": "2026-07",
+        "companyCode": "CN02", "supplier": "安徽高透光伏材料有限公司", "category": "玻璃", "currency": "CNY",
+        "syncStatus": "sync-failed", "syncStatusLabel": "同步失败",
+        "occupancyStatus": "available", "occupancyStatusLabel": "未占用", "occupancyBillNo": "", "sapVersion": "V1", "latestFailedVersion": "V2",
+        "originalAmount": 743218.48, "discountRate": 9, "discountAmount": 66889.66, "afterAmount": 676328.82,
+        "createdDate": "2026-10-03", "saveDate": "2026-10-06", "lastSyncTime": "2026-10-06 09:18", "lastSyncUser": "周彦博", "hasDraft": true
+      }
+    ],
+    "accrualOptions": [
+      { "id": "A260916001", "accrualMonth": "2026-09", "companyCode": "CN01", "supplier": "嘉兴光伏玻璃制造有限公司", "category": "玻璃", "currency": "CNY", "syncStatus": "synced", "syncStatusLabel": "已同步" },
+      { "id": "A260915008", "accrualMonth": "2026-08", "companyCode": "CN01", "supplier": "湖州新能源玻璃有限公司", "category": "玻璃", "currency": "CNY", "syncStatus": "synced", "syncStatusLabel": "已同步" }
+    ],
+    "settlementReceiptLines": [
+      { "materialDoc": "5101948201", "item": "0010", "receiptDate": "2026-11-06", "purchaseOrder": "4500891042", "purchaseOrderItem": "00010", "plant": "1101", "material": "PVG-20-HC", "materialName": "2.0mm高透光伏玻璃", "quantity": 12000, "unitPrice": 28.65, "area": 24000, "m2UnitPrice": 14.325, "amount": 343800 },
+      { "materialDoc": "5101963358", "item": "0020", "receiptDate": "2026-11-17", "purchaseOrder": "4500891042", "purchaseOrderItem": "00020", "plant": "1101", "material": "PVG-32-BF", "materialName": "3.2mm背板玻璃", "quantity": 8000, "unitPrice": 31.42, "area": 25600, "m2UnitPrice": 9.8188, "amount": 251360 },
+      { "materialDoc": "5101970064", "item": "0010", "receiptDate": "2026-11-25", "purchaseOrder": "4500896608", "purchaseOrderItem": "00010", "plant": "1101", "material": "PVG-20-AR", "materialName": "2.0mm镀膜光伏玻璃退货", "quantity": -500, "unitPrice": 29.41, "area": -1000, "m2UnitPrice": 14.705, "amount": -14705 }
+    ],
+    "receiptLines": [
+      { "materialDoc": "5001847291", "item": "0010", "receiptDate": "2026-09-05", "purchaseOrder": "4500862317", "purchaseOrderItem": "00010", "plant": "1101", "material": "PVG-20-HC", "materialName": "2.0mm高透光伏玻璃", "quantity": 18420, "unitPrice": 28.65, "area": 18420, "m2UnitPrice": 28.65, "amount": 527733.00 },
+      { "materialDoc": "5001861048", "item": "0020", "receiptDate": "2026-09-14", "purchaseOrder": "4500862317", "purchaseOrderItem": "00020", "plant": "1101", "material": "PVG-32-BF", "materialName": "3.2mm背板玻璃", "quantity": 12680, "unitPrice": 31.42, "area": 12680, "m2UnitPrice": 31.42, "amount": 398365.60 },
+      { "materialDoc": "5001879562", "item": "0010", "receiptDate": "2026-09-26", "purchaseOrder": "4500869480", "purchaseOrderItem": "00010", "plant": "1101", "material": "PVG-20-AR", "materialName": "2.0mm镀膜光伏玻璃", "quantity": 11640, "unitPrice": 29.41, "area": 11640, "m2UnitPrice": 29.41, "amount": 342331.96 },
+      { "materialDoc": "5001886204", "item": "0010", "receiptDate": "2026-09-29", "purchaseOrder": "4500871026", "purchaseOrderItem": "00010", "plant": "1101", "material": "PVG-RET-20", "materialName": "2.0mm高透玻璃退货冲销", "quantity": -120, "unitPrice": 30.00, "area": -120, "m2UnitPrice": 30.00, "amount": -3600.00 }
+    ]
+  },
+  "reconciliationDemo": {
+    "billNo": "DZ260916008", "supplier": "湖州新能源玻璃有限公司", "settlementMonth": "2026-11", "status": "已确认",
+    "selectedSettlementId": "S261104002", "selectedSettlementStatus": "occupied", "selectedSettlementBillNo": "DZ260916008",
+    "attachmentFee": { "name": "玻璃采购折让", "serialNo": "S261104002", "amount": 67255.67, "currency": "CNY" }
+  }
+}

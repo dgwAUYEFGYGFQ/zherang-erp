@@ -1,0 +1,67 @@
+/* ================================================================
+   light.css — 浅色主题
+   白色顶栏 + Element Plus 默认中性调色板。
+   应用时：移除 html.dark 类；prototype-theme-id = "light"
+   ================================================================ */
+
+:root {
+  /* 主色调 — Element Plus 默认蓝 */
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #ecf5ff;
+  --el-color-primary-dark-2: #337ecc;
+
+  /* 背景色 — 中性浅灰 */
+  --el-bg-color-page: #f2f3f5;
+  --el-bg-color: #ffffff;
+  --el-bg-color-overlay: #ffffff;
+
+  /* 边框色 — Element Plus 默认 */
+  --el-border-color: #dcdfe6;
+  --el-border-color-light: #e4e7ed;
+  --el-border-color-lighter: #ebeef5;
+  --el-border-color-extra-light: #f2f6fc;
+
+  /* 填充色 */
+  --el-fill-color: #f0f2f5;
+  --el-fill-color-light: #f5f7fa;
+  --el-fill-color-lighter: #fafafa;
+  --el-fill-color-blank: #ffffff;
+
+  /* 文字色 — Element Plus 默认 */
+  --el-text-color-primary: #303133;
+  --el-text-color-regular: #606266;
+
+  /* 表格 */
+  --prototype-table-zebra-bg: #fafafa;
+  --prototype-table-selected-bg: #f0faf3;
+  --prototype-table-acted-bg: #ecf5ff;
+
+  /* 顶栏 — 白色 */
+  --prototype-topbar-bg: #ffffff;
+  --prototype-topbar-bg-2: #f8f9fb;
+  --prototype-topbar-border: #dcdfe6;
+  --prototype-topbar-text: #303133;
+  --prototype-topbar-text-secondary: #909399;
+  --prototype-topbar-icon: #606266;
+  --prototype-topbar-hover: rgba(0, 0, 0, .05);
+  --prototype-topbar-divider: rgba(0, 0, 0, .1);
+  --prototype-topbar-accent: #409eff;
+  --prototype-topbar-shadow: 0 1px 0 rgba(0, 0, 0, .08), 0 2px 8px rgba(0, 0, 0, .05);
+  --prototype-topbar-brand-mark-bg: rgba(64, 158, 255, .1);
+  --prototype-topbar-brand-mark-border: rgba(64, 158, 255, .2);
+  --prototype-topbar-search-bg: #f4f6f8;
+  --prototype-topbar-search-hover-bg: #eef0f3;
+  --prototype-topbar-search-focus-bg: #ffffff;
+  --prototype-topbar-search-border: #dcdfe6;
+  --prototype-topbar-search-hover-border: #c0c4cc;
+  --prototype-topbar-btn-hover-color: var(--el-color-primary);
+
+  /* 阴影 */
+  --prototype-shadow-sm: 0 1px 2px rgba(15, 23, 42, .04), 0 1px 1px rgba(15, 23, 42, .03);
+  --prototype-shadow-md: 0 2px 8px rgba(15, 23, 42, .06), 0 1px 2px rgba(15, 23, 42, .04);
+  --prototype-surface-hover-shadow: 0 8px 20px rgba(64, 158, 255, .12), 0 2px 8px rgba(15, 23, 42, .06);
+}
