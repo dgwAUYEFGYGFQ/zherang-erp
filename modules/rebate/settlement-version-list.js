@@ -2,9 +2,9 @@
   const componentName = 'RebateSettlementVersionListPage';
 
   const fallbackRows = [
-    { id: 'S261105001', settlementMonth: '2026-11', accrualId: 'A260916001', accrualMonth: '2026-09', companyCode: 'CN01', supplier: '嘉兴光伏玻璃制造有限公司', category: '玻璃', currency: 'CNY', originalAmount: 1264830.56, discountRate: 6, discountAmount: 75889.83, afterAmount: 1188940.73, syncStatus: 'synced', occupancyStatus: 'available', reconciliationId: '', sapVersion: 'V1', updateTime: '2026-11-05 10:42' },
-    { id: 'S261105002', settlementMonth: '2026-11', accrualId: 'A260915008', accrualMonth: '2026-08', companyCode: 'CN01', supplier: '湖州新能源玻璃有限公司', category: '玻璃', currency: 'CNY', originalAmount: 896742.30, discountRate: 7.5, discountAmount: 67255.67, afterAmount: 829486.63, syncStatus: 'synced', occupancyStatus: 'occupied', reconciliationId: 'DZ260916008', sapVersion: 'V1', updateTime: '2026-11-05 11:08' },
-    { id: 'S261103003', settlementMonth: '2026-10', accrualId: 'A260914006', accrualMonth: '2026-07', companyCode: 'CN02', supplier: '安徽高透光伏材料有限公司', category: '玻璃', currency: 'CNY', originalAmount: 743218.48, discountRate: 9, discountAmount: 66889.66, afterAmount: 676328.82, syncStatus: 'sync-failed', occupancyStatus: 'available', reconciliationId: '', sapVersion: 'V1', updateTime: '2026-11-05 09:36' }
+    { id: 'S261105001', settlementMonth: '2026-11', accrualId: 'A260916001', accrualMonth: '2026-09', companyCode: 'CN01', supplier: '嘉兴光伏玻璃制造有限公司', category: '玻璃', currency: 'CNY', originalAmount: 1264830.56, areaTotal: 42740, discountUnitPrice: 22.0000, discountAmount: 940280.0000, afterAmount: 324550.5600, syncStatus: 'synced', occupancyStatus: 'available', reconciliationId: '', sapVersion: 'V1', updateTime: '2026-11-05 10:42' },
+    { id: 'S261105002', settlementMonth: '2026-11', accrualId: 'A260915008', accrualMonth: '2026-08', companyCode: 'CN01', supplier: '湖州新能源玻璃有限公司', category: '玻璃', currency: 'CNY', originalAmount: 896742.30, areaTotal: 30000, discountUnitPrice: 21.5000, discountAmount: 645000.0000, afterAmount: 251742.3000, syncStatus: 'synced', occupancyStatus: 'occupied', reconciliationId: 'DZ260916008', sapVersion: 'V1', updateTime: '2026-11-05 11:08' },
+    { id: 'S261103003', settlementMonth: '2026-10', accrualId: 'A260914006', accrualMonth: '2026-07', companyCode: 'CN02', supplier: '安徽高透光伏材料有限公司', category: '玻璃', currency: 'CNY', originalAmount: 743218.48, areaTotal: 25000, discountUnitPrice: 23.0000, discountAmount: 575000.0000, afterAmount: 168218.4800, syncStatus: 'sync-failed', occupancyStatus: 'available', reconciliationId: '', sapVersion: 'V1', updateTime: '2026-11-05 09:36' }
   ];
 
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -64,8 +64,8 @@
       },
       syncLabel, syncType,
       occupancyLabel(value) { return value === 'occupied' ? '已占用' : '未占用'; },
-      money(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
-      rate(value) { return Number(value || 0).toFixed(2).replace(/\.00$/, '') + '%'; }
+      money(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); },
+      formatUnitPrice(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); }
     },
     template: `
       <div class="flow-progress-layout">
@@ -98,7 +98,7 @@
                 <el-table-column prop="supplier" label="供应商" min-width="210" show-overflow-tooltip></el-table-column>
                 <el-table-column prop="category" label="品类" width="72"></el-table-column>
                 <el-table-column prop="originalAmount" label="原金额" width="120" align="right"><template v-slot:default="scope">{{ money(scope.row.originalAmount) }}</template></el-table-column>
-                <el-table-column prop="discountRate" label="折让比例" width="90" align="right"><template v-slot:default="scope">{{ rate(scope.row.discountRate) }}</template></el-table-column>
+                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="145" align="right"><template v-slot:default="scope">{{ formatUnitPrice(scope.row.discountUnitPrice) }}</template></el-table-column>
                 <el-table-column prop="discountAmount" label="折让金额" width="120" align="right"><template v-slot:default="scope">{{ money(scope.row.discountAmount) }}</template></el-table-column>
                 <el-table-column prop="afterAmount" label="折后金额" width="120" align="right"><template v-slot:default="scope">{{ money(scope.row.afterAmount) }}</template></el-table-column>
                 <el-table-column prop="syncStatus" label="同步状态" width="105"><template v-slot:default="scope"><el-tag size="small" :type="syncType(scope.row.syncStatus)">{{ syncLabel(scope.row.syncStatus) }}</el-tag></template></el-table-column>

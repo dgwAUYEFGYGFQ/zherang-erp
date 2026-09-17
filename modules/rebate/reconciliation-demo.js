@@ -1,9 +1,9 @@
 (function (window) {
   const componentName = 'RebateReconciliationDemoPage';
   const settlementSeed = [
-    { id: 'S261105001', settlementMonth: '2026-11', accrualId: 'A260916001', accrualMonth: '2026-09', companyCode: 'CN01', supplier: '嘉兴光伏玻璃制造有限公司', currency: 'CNY', discountAmount: 75889.83, syncStatus: 'synced', occupancyStatus: 'available', reconciliationId: '' },
-    { id: 'S261105002', settlementMonth: '2026-11', accrualId: 'A260915008', accrualMonth: '2026-08', companyCode: 'CN01', supplier: '湖州新能源玻璃有限公司', currency: 'CNY', discountAmount: 67255.67, syncStatus: 'synced', occupancyStatus: 'occupied', reconciliationId: 'DZ260916008' },
-    { id: 'S261103003', settlementMonth: '2026-10', accrualId: 'A260914006', accrualMonth: '2026-07', companyCode: 'CN02', supplier: '安徽高透光伏材料有限公司', currency: 'CNY', discountAmount: 66889.66, syncStatus: 'sync-failed', occupancyStatus: 'available', reconciliationId: '' }
+    { id: 'S261105001', settlementMonth: '2026-11', accrualId: 'A260916001', accrualMonth: '2026-09', companyCode: 'CN01', supplier: '嘉兴光伏玻璃制造有限公司', currency: 'CNY', discountUnitPrice: 22.0000, discountAmount: 1443200.0000, syncStatus: 'synced', occupancyStatus: 'available', reconciliationId: '' },
+    { id: 'S261105002', settlementMonth: '2026-11', accrualId: 'A260915008', accrualMonth: '2026-08', companyCode: 'CN01', supplier: '湖州新能源玻璃有限公司', currency: 'CNY', discountUnitPrice: 21.5000, discountAmount: 1410400.0000, syncStatus: 'synced', occupancyStatus: 'occupied', reconciliationId: 'DZ260916008' },
+    { id: 'S261103003', settlementMonth: '2026-10', accrualId: 'A260914006', accrualMonth: '2026-07', companyCode: 'CN02', supplier: '安徽高透光伏材料有限公司', currency: 'CNY', discountUnitPrice: 23.0000, discountAmount: 1485800.0000, syncStatus: 'sync-failed', occupancyStatus: 'available', reconciliationId: '' }
   ];
   const reconciliationSeed = [
     { id: 'DZ260916009', supplier: '嘉兴光伏玻璃制造有限公司', companyCode: 'CN01', currency: 'CNY', settlementMonth: '2026-11', status: '待确认', selectedSettlementId: '' }
@@ -66,12 +66,14 @@
       rowStyle({ row }) { return this.isSelectable(row) ? null : { opacity: '0.52', background: 'var(--el-fill-color-light)' }; },
       chooseSettlement(row) {
         if (!this.isSelectable(row)) return ElementPlus.ElMessage.warning(this.blockedReason(row));
+        row.discountAmount = this.reconciliationMoney(row.discountAmount);
         this.current.selectedSettlementId = row.id; this.selectorOpen = false;
         ElementPlus.ElMessage.success('已选择结算单 ' + row.id + '，保存确认后将正式占用');
       },
       confirmReconciliation() {
         if (!this.selectedSettlement) return ElementPlus.ElMessage.warning('请先在附加费用中选择结算单流水号');
         if (!this.isSelectable(this.selectedSettlement)) return ElementPlus.ElMessage.error(this.blockedReason(this.selectedSettlement));
+        this.selectedSettlement.discountAmount = this.reconciliationMoney(this.selectedSettlement.discountAmount);
         ElementPlus.ElMessageBox.confirm('确认保存并确认对账单 ' + this.current.id + '？结算单将被正式占用。', '保存并确认', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }).then(() => {
           this.current.status = '已确认';
           this.selectedSettlement.occupancyStatus = 'occupied';
@@ -103,7 +105,8 @@
       },
       statusType(value) { return value === '已确认' ? 'success' : value === '已作废' ? 'info' : 'warning'; },
       syncLabel(value) { return value === 'synced' ? '已同步' : (value === 'resubmit-failed' || value === 'sync-failed') ? '同步失败' : '草稿'; },
-      money(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      money(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+      reconciliationMoney(value) { return Number(Number(value || 0).toFixed(2)); },
     },
     template: `
       <div class="flow-progress-layout">
@@ -132,7 +135,7 @@
 
         <el-dialog v-model="selectorOpen" title="选择结算单" width="88%" :append-to-body="false" :teleported="false" data-tour="reconciliation-selector">
           <el-table :data="settlements" size="small" stripe border :row-style="rowStyle" style="width:100%">
-            <el-table-column prop="id" label="结算单号" width="126"></el-table-column><el-table-column prop="settlementMonth" label="结算年月" width="102"></el-table-column><el-table-column prop="accrualId" label="计提单号" width="126"></el-table-column><el-table-column prop="accrualMonth" label="计提年月" width="102"></el-table-column><el-table-column prop="companyCode" label="公司代码" width="94"></el-table-column><el-table-column prop="supplier" label="供应商" min-width="205" show-overflow-tooltip></el-table-column><el-table-column prop="currency" label="币种" width="72"></el-table-column><el-table-column prop="discountAmount" label="折让金额" width="120" align="right"><template v-slot:default="scope">{{ money(scope.row.discountAmount) }}</template></el-table-column><el-table-column prop="syncStatus" label="同步状态" width="105"><template v-slot:default="scope"><el-tag size="small" :type="scope.row.syncStatus === 'synced' ? 'success' : 'danger'">{{ syncLabel(scope.row.syncStatus) }}</el-tag></template></el-table-column><el-table-column prop="occupancyStatus" label="占用状态" min-width="210"><template v-slot:default="scope"><span v-if="scope.row.occupancyStatus === 'occupied'" style="color:var(--el-color-danger)">已被对账单{{ scope.row.reconciliationId }}占用</span><span v-else>未占用</span></template></el-table-column><el-table-column label="操作" width="86" fixed="right"><template v-slot:default="scope"><el-button link type="primary" size="small" :disabled="!isSelectable(scope.row)" @click="chooseSettlement(scope.row)">选择</el-button></template></el-table-column>
+            <el-table-column prop="id" label="结算单号" width="126"></el-table-column><el-table-column prop="settlementMonth" label="结算年月" width="102"></el-table-column><el-table-column prop="accrualId" label="计提单号" width="126"></el-table-column><el-table-column prop="accrualMonth" label="计提年月" width="102"></el-table-column><el-table-column prop="companyCode" label="公司代码" width="94"></el-table-column><el-table-column prop="supplier" label="供应商" min-width="205" show-overflow-tooltip></el-table-column><el-table-column prop="currency" label="币种" width="72"></el-table-column><el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="145" align="right"><template v-slot:default="scope">{{ Number(scope.row.discountUnitPrice || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) }}</template></el-table-column><el-table-column prop="discountAmount" label="折让金额" width="120" align="right"><template v-slot:default="scope">{{ money(scope.row.discountAmount) }}</template></el-table-column><el-table-column prop="syncStatus" label="同步状态" width="105"><template v-slot:default="scope"><el-tag size="small" :type="scope.row.syncStatus === 'synced' ? 'success' : 'danger'">{{ syncLabel(scope.row.syncStatus) }}</el-tag></template></el-table-column><el-table-column prop="occupancyStatus" label="占用状态" min-width="210"><template v-slot:default="scope"><span v-if="scope.row.occupancyStatus === 'occupied'" style="color:var(--el-color-danger)">已被对账单{{ scope.row.reconciliationId }}占用</span><span v-else>未占用</span></template></el-table-column><el-table-column label="操作" width="86" fixed="right"><template v-slot:default="scope"><el-button link type="primary" size="small" :disabled="!isSelectable(scope.row)" @click="chooseSettlement(scope.row)">选择</el-button></template></el-table-column>
           </el-table>
           <template v-slot:footer><el-button @click="selectorOpen = false">关闭</el-button></template>
         </el-dialog>

@@ -7,7 +7,7 @@
   }
 
   function roundMoney(value) {
-    return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+    return Math.round((Number(value || 0) + Number.EPSILON) * 10000) / 10000;
   }
 
   function versionNumber(version) {
@@ -25,14 +25,14 @@
   function createHistory(record) {
     if (record.id === 'A260916001') {
       return [
-        { version: 'V5', status: 'active', statusLabel: 'SAP生效', rate: 8, submitter: '陈静怡', submitTime: '2026-09-16 10:30', sapResult: '同步成功，当前生效' },
-        { version: 'V4', status: 'replaced', statusLabel: '已被替代', rate: 7.5, submitter: '张伟', submitTime: '2026-09-12 16:20', sapResult: '同步成功' },
-        { version: 'V2', status: 'replaced', statusLabel: '已被替代', rate: 6, submitter: '李明', submitTime: '2026-09-05 11:10', sapResult: '同步成功' },
-        { version: 'V1', status: 'replaced', statusLabel: '已被替代', rate: 5, submitter: '李明', submitTime: '2026-09-01 09:25', sapResult: '首次同步成功' }
+        { version: 'V5', status: 'active', statusLabel: 'SAP生效', unitPrice: 27.3000, submitter: '陈静怡', submitTime: '2026-09-16 10:30', sapResult: '同步成功，当前生效' },
+        { version: 'V4', status: 'replaced', statusLabel: '已被替代', unitPrice: 27.8000, submitter: '张伟', submitTime: '2026-09-12 16:20', sapResult: '同步成功' },
+        { version: 'V2', status: 'replaced', statusLabel: '已被替代', unitPrice: 28.2000, submitter: '李明', submitTime: '2026-09-05 11:10', sapResult: '同步成功' },
+        { version: 'V1', status: 'replaced', statusLabel: '已被替代', unitPrice: 28.6000, submitter: '李明', submitTime: '2026-09-01 09:25', sapResult: '首次同步成功' }
       ];
     }
     const version = record.sapVersion || 'V1';
-    return [{ version, status: 'active', statusLabel: 'SAP生效', rate: Number(record.sapDiscountRate || record.discountRate || 0), submitter: record.lastSyncUser || '陈静怡', submitTime: record.lastSyncTime || '2026-09-16 10:30', sapResult: '同步成功，当前生效' }];
+    return [{ version, status: 'active', statusLabel: 'SAP生效', unitPrice: Number(record.sapDiscountUnitPrice || record.discountUnitPrice || 0), submitter: record.lastSyncUser || '陈静怡', submitTime: record.lastSyncTime || '2026-09-16 10:30', sapResult: '同步成功，当前生效' }];
   }
 
   function normalizeRecord(source) {
@@ -56,15 +56,15 @@
       record.hasDraft = true;
       record.status = 'pending-resubmit';
       record.statusLabel = '待重新提交';
-      record.discountRate = 10;
-      record.sapDiscountRate = 8;
+      record.discountUnitPrice = 26.7000;
+      record.sapDiscountUnitPrice = 27.3000;
       record.lastModifiedTime = '2026-09-16 11:26';
       record.lastModifiedUser = '陈静怡';
     } else {
       record.draftBaseVersion = record.sapVersion || 'V1';
       record.hasDraft = record.syncStatus !== 'synced'
         || (record.currentVersion && record.currentVersion !== record.sapVersion)
-        || Math.abs(Number(record.discountRate || 0) - Number(record.sapDiscountRate || record.discountRate || 0)) > 0.0001;
+        || Math.abs(Number(record.discountUnitPrice || 0) - Number(record.sapDiscountUnitPrice || record.discountUnitPrice || 0)) > 0.0001;
     }
     record.remark = record.remark || (record.id === 'A260916001' ? '2026年9月玻璃采购折让计提，按收货记录逐行计算。' : '玻璃采购折让计提，按收货记录逐行计算。');
     record.sapRemark = record.sapRemark || '依据月度玻璃采购协议执行折让计提。';
@@ -76,7 +76,8 @@
       const line = deepClone(source);
       if (isSeptemberExample) line.receiptDate = ['2026-09-05', '2026-09-14', '2026-09-26'][index] || line.receiptDate;
       line.area = Number(line.area != null ? line.area : line.quantity || 0);
-      line.m2UntaxedUnitPrice = Number(line.m2UntaxedUnitPrice != null ? line.m2UntaxedUnitPrice : line.unitPrice || 0);
+      line.amount = roundMoney(line.amount);
+      line.m2UntaxedUnitPrice = Number(line.area || 0) === 0 ? 0 : roundMoney(Number(line.amount || 0) / Number(line.area || 0));
       return line;
     });
   }
@@ -148,11 +149,11 @@
         activeView: record.hasDraft ? 'draft' : 'sap',
         selectedHistory: null,
         activeTab: 'receipts',
-        draftRate: Number(record.discountRate || 0),
-        savedDraftRate: Number(record.discountRate || 0),
+        draftUnitPrice: Number(record.discountUnitPrice || 0),
+        savedDraftUnitPrice: Number(record.discountUnitPrice || 0),
         draftRemark: record.remark,
         savedDraftRemark: record.remark,
-        sapRate: Number(record.sapDiscountRate || record.discountRate || 0),
+        sapUnitPrice: Number(record.sapDiscountUnitPrice || record.discountUnitPrice || 0),
         sapRemark: record.sapRemark,
         sapVersion: record.sapVersion || 'V1',
         submitting: false,
@@ -171,9 +172,9 @@
       isHistoryView() {
         return this.activeView === 'history';
       },
-      activeRate() {
-        if (this.isHistoryView && this.selectedHistory) return Number(this.selectedHistory.rate || 0);
-        return this.isSapView ? this.sapRate : this.draftRate;
+      activeUnitPrice() {
+        if (this.isHistoryView && this.selectedHistory) return Number(this.selectedHistory.unitPrice || 0);
+        return this.isSapView ? this.sapUnitPrice : this.draftUnitPrice;
       },
       activeRemark() {
         if (this.isHistoryView && this.selectedHistory) return '历史版本' + this.selectedHistory.version + '提交快照；' + this.selectedHistory.sapResult;
@@ -190,16 +191,16 @@
         return this.record.syncStatusLabel || '待重新提交';
       },
       activeDiscountAmount() {
-        return roundMoney(this.activeOriginalAmount * this.activeRate / 100);
+        return roundMoney(this.displayedLines.reduce((sum, item) => sum + Number(item.discountAmount || 0), 0));
       },
       activeAfterAmount() {
-        return roundMoney(this.activeOriginalAmount - this.activeDiscountAmount);
+        return roundMoney(this.displayedLines.reduce((sum, item) => sum + Number(item.afterAmount || 0), 0));
       },
       draftOriginalAmount() {
-        return roundMoney(this.receiptSource.reduce((sum, item) => sum + Number(item.amount || 0), 0));
+        return roundMoney(this.receiptSource.reduce((sum, item) => sum + roundMoney(Number(item.amount || 0)), 0));
       },
       sapOriginalAmount() {
-        return roundMoney(this.sapReceiptSource.reduce((sum, item) => sum + Number(item.amount || 0), 0));
+        return roundMoney(this.sapReceiptSource.reduce((sum, item) => sum + roundMoney(Number(item.amount || 0)), 0));
       },
       activeOriginalAmount() {
         return this.isDraftView ? this.draftOriginalAmount : this.sapOriginalAmount;
@@ -208,23 +209,28 @@
         const sources = this.isDraftView ? this.receiptSource : this.sapReceiptSource;
         return sources.map((source) => {
           const line = deepClone(source);
-          line.discountAmount = roundMoney(Number(line.amount || 0) * this.activeRate / 100);
-          line.afterAmount = roundMoney(Number(line.amount || 0) - line.discountAmount);
+          const amount = roundMoney(Number(line.amount || 0));
+          const area = Number(line.area || 0);
+          line.amount = amount;
+          line.m2UntaxedUnitPrice = area === 0 ? 0 : roundMoney(amount / area);
+          line.discountUnitPrice = roundMoney(this.activeUnitPrice);
+          line.afterAmount = roundMoney(area * this.activeUnitPrice);
+          line.discountAmount = roundMoney(amount - line.afterAmount);
           return line;
         });
       },
       historyRows() {
         return this.history.map((item) => {
           const row = deepClone(item);
-          row.discountAmount = roundMoney(this.sapOriginalAmount * Number(row.rate || 0) / 100);
-          row.afterAmount = roundMoney(this.sapOriginalAmount - row.discountAmount);
+          row.afterAmount = roundMoney(this.sapReceiptSource.reduce((sum, line) => sum + roundMoney(Number(line.area || 0) * Number(row.unitPrice || 0)), 0));
+          row.discountAmount = roundMoney(this.sapOriginalAmount - row.afterAmount);
           return row;
         });
       },
       nextSubmitVersion() {
         const latestFailed = this.history.find((item) => item.status === 'failed');
         const canRetryFailed = latestFailed
-          && Math.abs(Number(latestFailed.rate || 0) - this.draftRate) < 0.0001
+          && Math.abs(Number(latestFailed.unitPrice || 0) - this.draftUnitPrice) < 0.0001
           && latestFailed.remark === this.draftRemark
           && Number(latestFailed.receiptCount || 0) === this.receiptSource.length;
         if (canRetryFailed) return latestFailed.version;
@@ -232,7 +238,7 @@
         return 'V' + (max + 1);
       },
       hasUnsavedChanges() {
-        return Math.abs(this.draftRate - this.savedDraftRate) > 0.0001
+        return Math.abs(this.draftUnitPrice - this.savedDraftUnitPrice) > 0.0001
           || this.draftRemark !== this.savedDraftRemark
           || this.receiptSource.length !== this.savedReceiptCount;
       }
@@ -255,7 +261,7 @@
       returnFromHistory() {
         const hasDraft = this.record.syncStatus !== 'synced'
           || (this.record.currentVersion && this.record.currentVersion !== this.sapVersion)
-          || Math.abs(Number(this.draftRate) - Number(this.sapRate)) > 0.0001
+          || Math.abs(Number(this.draftUnitPrice) - Number(this.sapUnitPrice)) > 0.0001
           || this.hasUnsavedChanges;
         this.activeView = hasDraft ? 'draft' : 'sap';
         this.selectedHistory = null;
@@ -276,8 +282,9 @@
           ElementPlus.ElMessage.info('当前编辑稿没有新的修改');
           return;
         }
+        if (!this.validatePricing()) return;
         const now = formatDateTime();
-        this.savedDraftRate = this.draftRate;
+        this.savedDraftUnitPrice = this.draftUnitPrice;
         this.savedDraftRemark = this.draftRemark;
         this.savedReceiptCount = this.receiptSource.length;
         this.record.lastModifiedTime = now;
@@ -296,7 +303,8 @@
           ElementPlus.ElMessage.warning('存在未保存修改，请先保存编辑稿');
           return;
         }
-        if (Math.abs(this.draftRate - this.sapRate) < 0.0001 && this.draftRemark === this.sapRemark) {
+        if (!this.validatePricing()) return;
+        if (Math.abs(this.draftUnitPrice - this.sapUnitPrice) < 0.0001 && this.draftRemark === this.sapRemark) {
           ElementPlus.ElMessage.info('编辑稿与SAP生效版本没有差异，无需提交');
           return;
         }
@@ -327,9 +335,9 @@
                 item.sapResult = '同步成功';
               }
             });
-            this.history.unshift({ version: targetVersion, status: 'active', statusLabel: 'SAP生效', rate: this.draftRate, submitter: '陈静怡', submitTime: now, sapResult: '同步成功，当前生效' });
+            this.history.unshift({ version: targetVersion, status: 'active', statusLabel: 'SAP生效', unitPrice: this.draftUnitPrice, submitter: '陈静怡', submitTime: now, sapResult: '同步成功，当前生效' });
             this.sapVersion = targetVersion;
-            this.sapRate = this.draftRate;
+            this.sapUnitPrice = this.draftUnitPrice;
             this.sapRemark = this.draftRemark;
             this.sapReceiptSource = deepClone(this.receiptSource);
             this.record.sapVersion = targetVersion;
@@ -379,6 +387,26 @@
         this.record.syncStatusLabel = '待重新提交';
         ElementPlus.ElMessage.success('已按计提年月＋公司代码＋供应商＋玻璃获取1条最新收货记录，金额已重新汇总');
       },
+      validatePricing() {
+        if (this.draftUnitPrice === null || this.draftUnitPrice === undefined || this.draftUnitPrice === '') {
+          ElementPlus.ElMessage.warning('请输入折让后M²不含税单价');
+          return false;
+        }
+        const invalidLine = this.receiptSource.find((line) => {
+          const area = Number(line.area);
+          const amount = Number(line.amount);
+          return Number.isNaN(area) || Number.isNaN(amount)
+            || ((area === 0 || line.area === '' || line.area == null) && amount !== 0)
+            || (area !== 0 && (line.amount === '' || line.amount == null));
+        });
+        if (invalidLine) {
+          const lineIndex = this.receiptSource.indexOf(invalidLine) + 1;
+          ElementPlus.ElMessage.warning('第' + lineIndex + '行收货记录缺少有效玻璃面积或原金额，无法计算折后金额');
+          this.activeTab = 'receipts';
+          return false;
+        }
+        return true;
+      },
       historyTagType(status) {
         return { active: 'success', failed: 'danger', replaced: 'info' }[status] || 'info';
       },
@@ -387,10 +415,10 @@
         return this.isSapView ? 'success' : 'warning';
       },
       formatMoney(value) {
-        return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
       },
-      formatRate(value) {
-        return Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + '%';
+      formatUnitPrice(value) {
+        return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
       },
       signed(value, suffix) {
         const number = Number(value || 0);
@@ -432,7 +460,7 @@
             <span v-else>当前展示 {{ selectedHistory.version }} 提交时的完整快照；即使同步失败，也保留当次提交内容供追溯。</span>
           </div>
 
-          <div v-if="isHistoryView" class="rebate-history-view-banner"><span><i class="ri-history-line"></i> 已进入 {{ selectedHistory.version }} 历史快照，头信息、汇总金额与收货明细均按 {{ formatRate(selectedHistory.rate) }} 重算。</span></div>
+          <div v-if="isHistoryView" class="rebate-history-view-banner"><span><i class="ri-history-line"></i> 已进入 {{ selectedHistory.version }} 历史快照，头信息、汇总金额与收货明细均按该版本折让后M²不含税单价展示。</span></div>
 
           <div class="rebate-detail-form-wrap">
             <div class="rebate-detail-section-title"><span>基本信息</span><el-tag size="small" :type="viewTagType()">{{ viewTitle }}</el-tag></div>
@@ -454,9 +482,9 @@
               <div class="rebate-detail-section-title"><span>折让计算</span></div>
               <div class="rebate-detail-form-grid">
                 <el-form-item label="原金额"><el-input :model-value="formatMoney(activeOriginalAmount)" disabled><template v-slot:append>{{ record.currency }}</template></el-input></el-form-item>
-                <el-form-item label="折让比例" :class="{ 'rebate-editable-field': isDraftView }">
-                  <el-input-number v-if="isDraftView" v-model="draftRate" :min="0" :max="100" :precision="2" :step="0.5" style="width:100%"></el-input-number>
-                  <el-input v-else :model-value="formatRate(activeRate)" disabled></el-input>
+                <el-form-item label="折让后M²不含税单价" :class="{ 'rebate-editable-field': isDraftView }">
+                  <el-input-number v-if="isDraftView" v-model="draftUnitPrice" :precision="4" :step="0.0001" style="width:100%"></el-input-number>
+                  <el-input v-else :model-value="formatUnitPrice(activeUnitPrice)" disabled></el-input>
                 </el-form-item>
                 <el-form-item label="折让计提金额"><el-input :model-value="formatMoney(activeDiscountAmount)" disabled><template v-slot:append>{{ record.currency }}</template></el-input></el-form-item>
                 <el-form-item label="折后金额"><el-input :model-value="formatMoney(activeAfterAmount)" disabled><template v-slot:append>{{ record.currency }}</template></el-input></el-form-item>
@@ -475,7 +503,7 @@
           <el-tabs v-model="activeTab">
             <el-tab-pane label="收货明细" name="receipts">
               <div class="rebate-detail-table-note">
-                <span>按计提年月＋公司代码＋供应商＋玻璃匹配；折让比例 {{ formatRate(activeRate) }} 逐行重算 · 最近获取：{{ lastReceiptFetchTime }}</span>
+                <span>按计提年月＋公司代码＋供应商＋玻璃匹配；折让后M²不含税单价 {{ formatUnitPrice(activeUnitPrice) }} 逐行重算 · 最近获取：{{ lastReceiptFetchTime }}</span>
                 <div style="display:flex;align-items:center;gap:10px;"><span>共 {{ displayedLines.length }} 条收货记录</span><el-button v-if="isDraftView" size="small" type="primary" plain @click="refreshReceipts"><i class="ri-refresh-line"></i><span>获取最新收货记录</span></el-button></div>
               </div>
               <el-table class="rebate-detail-table" :data="displayedLines" size="small" stripe border max-height="360" style="width:100%" data-tour="rebate-detail-receipts">
@@ -489,7 +517,8 @@
                 <el-table-column prop="materialName" label="物料名称" min-width="170" show-overflow-tooltip></el-table-column>
                 <el-table-column prop="quantity" label="数量" width="96" align="right"><template v-slot:default="scope">{{ Number(scope.row.quantity || 0).toLocaleString('zh-CN') }}</template></el-table-column>
                 <el-table-column prop="area" label="面积" width="100" align="right"><template v-slot:default="scope">{{ Number(scope.row.area || 0).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) }}</template></el-table-column>
-                <el-table-column prop="m2UntaxedUnitPrice" label="M2不含税单价" width="126" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.m2UntaxedUnitPrice) }}</template></el-table-column>
+                <el-table-column prop="m2UntaxedUnitPrice" label="原M²不含税单价" width="142" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.m2UntaxedUnitPrice) }}</template></el-table-column>
+                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="160" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountUnitPrice) }}</template></el-table-column>
                 <el-table-column prop="unitPrice" label="单价" width="94" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.unitPrice) }}</template></el-table-column>
                 <el-table-column prop="amount" label="原金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.amount) }}</template></el-table-column>
                 <el-table-column prop="discountAmount" label="折让金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountAmount) }}</template></el-table-column>
@@ -502,7 +531,7 @@
               <el-table class="rebate-detail-table" :data="historyRows" size="small" stripe border max-height="360" style="width:100%" data-tour="rebate-detail-history">
                 <el-table-column prop="version" label="版本" width="76"></el-table-column>
                 <el-table-column prop="statusLabel" label="状态" width="106"><template v-slot:default="scope"><el-tag size="small" :type="historyTagType(scope.row.status)">{{ scope.row.statusLabel }}</el-tag></template></el-table-column>
-                <el-table-column prop="rate" label="折让比例" width="100" align="right"><template v-slot:default="scope">{{ formatRate(scope.row.rate) }}</template></el-table-column>
+                <el-table-column prop="unitPrice" label="折让后M²不含税单价" width="160" align="right"><template v-slot:default="scope">{{ formatUnitPrice(scope.row.unitPrice) }}</template></el-table-column>
                 <el-table-column prop="discountAmount" label="折让金额" width="126" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountAmount) }}</template></el-table-column>
                 <el-table-column prop="afterAmount" label="折后金额" width="126" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.afterAmount) }}</template></el-table-column>
                 <el-table-column prop="submitter" label="提交人" width="92"></el-table-column>
@@ -532,19 +561,19 @@
     guideSteps: [
       { target: '[data-tour="rebate-detail-toolbar"]', title: '处理计提编辑稿', description: '顶部操作条集中完成保存编辑稿、提交生成正式版本和返回列表；历史快照查看时右上角“返回”按当前编辑稿状态定位。' },
       { target: '[data-tour="rebate-detail-view-switch"]', title: '切换当前业务视图', description: '在当前编辑稿与SAP生效版本之间切换；历史快照也会在同一详情页中只读呈现。' },
-      { target: '[data-tour="rebate-detail-form"]', title: '核对头信息与折让金额', description: '三列字段区展示计提单头信息、版本身份、折让比例和按当前视图实时计算的金额。' },
+      { target: '[data-tour="rebate-detail-form"]', title: '核对头信息与折让金额', description: '三列字段区展示计提单头信息、版本身份、折让后M²不含税单价和按当前视图实时计算的金额。' },
       { target: '[data-tour="rebate-detail-tabs"]', title: '查看收货与版本记录', description: '通过收货明细和版本记录完成金额核对、最新收货刷新与历史快照追溯。' },
-      { target: '[data-tour="rebate-detail-receipts"]', title: '刷新并核对收货计算', description: '编辑稿按计提年月、公司代码、供应商与玻璃品类获取最新收货记录，随后按当前比例逐行重算金额。' }
+      { target: '[data-tour="rebate-detail-receipts"]', title: '刷新并核对收货计算', description: '编辑稿按计提年月、公司代码、供应商与玻璃品类获取最新收货记录，随后按当前折让后M²不含税单价逐行重算金额。' }
     ],
     noteSections: [
       {
         title: '业务目标',
         content: '本页帮助采购结算专员在独立详情页完成计提单编辑稿维护、SAP生效数据核对、收货明细计算和历史版本追溯。',
-        items: ['主演业务例为 A260916001，计提年月为2026-09：当前编辑稿基于V5、折让比例10%，SAP V5生效比例8%。', '详情使用完整页面承载，不使用侧边详情栏，便于查看三列表单与横向收货明细。']
+        items: ['主演业务例为 A260916001，计提年月为2026-09：当前编辑稿基于V5，SAP V5生效折让后M²不含税单价27.3000。', '详情使用完整页面承载，不使用侧边详情栏，便于查看三列表单与横向收货明细。']
       },
       {
         title: '版本快照查看规则',
-        content: '当前编辑稿可编辑折让比例和备注，SAP生效版本与V1至V5历史快照全部只读；选择历史版本后，同页头信息、金额和收货明细同步按该版本比例重算。',
+        content: '当前编辑稿可编辑折让后M²不含税单价和备注，SAP生效版本与V1至V5历史快照全部只读；选择历史版本后，同页头信息、金额和收货明细同步按该版本单价重算。',
         items: ['提交失败不会生成正式版本，只保留当前编辑稿和SAP返回原因供处理。', '历史快照查看结束后点击右上角“返回”，有编辑稿时回到当前编辑稿，没有编辑稿时回到最新SAP成功版本。']
       },
       {
@@ -577,7 +606,7 @@
           center: { title: '计提单详情', meta: '编辑、计算、对比、追溯', tone: 'primary' },
           upstream: [
             { title: '收货记录', meta: '按年月＋公司＋供应商＋玻璃获取', tone: 'info' },
-            { title: '折让协议', meta: '提供折让比例依据', tone: 'warning' }
+            { title: '折让协议', meta: '提供折让后M²不含税单价依据', tone: 'warning' }
           ],
           downstream: [
             { title: 'SAP计提', meta: '接收成功正式版本', tone: 'success' },
@@ -587,7 +616,7 @@
       },
       {
         title: '关键规则',
-        items: ['保存编辑稿只更新时间和本地内容，不生成V6。', '编辑稿按计提年月、公司代码、供应商与玻璃品类获取最新收货记录；同一批新增记录不会被重复加入。', '提交失败时显示SAP返回的明确原因，正式版本保持不变，当前编辑稿继续保留。', '折让金额按每条收货记录原金额乘折让比例计算，折后金额等于原金额减折让金额；负数数量与金额按原值参与计算，不取绝对值。', 'SAP生效版本和历史版本全部只读，任何历史快照查看都不得改变当前编辑稿。']
+        items: ['保存编辑稿只更新时间和本地内容，不生成V6。', '编辑稿按计提年月、公司代码、供应商与玻璃品类获取最新收货记录；同一批新增记录不会被重复加入。', '提交失败时显示SAP返回的明确原因，正式版本保持不变，当前编辑稿继续保留。', '折让金额按每条收货记录原金额乘折让后M²不含税单价计算，折后金额等于原金额减折让金额；负数数量与金额按原值参与计算，不取绝对值。', 'SAP生效版本和历史版本全部只读，任何历史快照查看都不得改变当前编辑稿。']
       }
     ]
   });

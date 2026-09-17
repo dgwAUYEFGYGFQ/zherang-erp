@@ -54,7 +54,7 @@
           "dataKeys": ["rebateAccruals"],
           "linkedBusinessObjects": ["计提单", "编辑稿", "SAP生效版本", "正式版本快照", "收货记录"],
           "outboundRoutes": ["#/rebate/accruals"],
-          "keyInteractions": ["编辑稿与SAP生效版本切换", "可编辑折让比例", "获取最新收货记录并逐行重算", "V1至V5完整快照切换", "全屏差异对比", "提交SAP生成V6"]
+          "keyInteractions": ["编辑稿与SAP生效版本切换", "可编辑折让后M²不含税单价", "获取最新收货记录并逐行重算", "V1至V5完整快照切换", "提交SAP生成V6"]
         },
         {
           "path": "#/rebate/accrual-create",
@@ -65,13 +65,13 @@
           "templateId": "query-table-list-page",
           "archetype": "全页业务创建（沿用查询表格视觉基线）",
           "breadcrumbs": ["折让管理", "计提单管理", "新增计提单"],
-          "tabInfo": "帮助采购结算专员新建玻璃计提单、获取收货记录、填写折让比例并保存草稿或同步SAP。",
+          "tabInfo": "帮助采购结算专员新建玻璃计提单、获取收货记录、填写折让后M²不含税单价并保存草稿或同步SAP。",
           "guideStepCount": 5,
           "noteSectionTitles": ["业务目标", "创建流程", "上下游关系", "关键规则"],
           "dataKeys": ["rebateAccruals"],
-          "linkedBusinessObjects": ["计提单", "收货记录", "折让比例", "SAP正式版本"],
+          "linkedBusinessObjects": ["计提单", "收货记录", "折让后M²不含税单价", "SAP正式版本"],
           "outboundRoutes": ["#/rebate/accruals"],
-          "keyInteractions": ["三列新建表单", "按年月与玻璃品类获取收货记录", "折让比例实时重算", "保存草稿生成单号", "提交SAP生成V1"]
+          "keyInteractions": ["三列新建表单", "按年月与玻璃品类获取收货记录", "折让后M²不含税单价实时重算", "保存草稿生成单号", "提交SAP生成V1"]
         },
         {
           "path": "#/rebate/settlements",
@@ -103,7 +103,7 @@
           "guideStepCount": 4,
           "noteSectionTitles": ["业务目标", "状态流转", "上下游关系", "关键规则"],
           "dataKeys": ["rebateSettlements", "rebateAccruals"],
-          "linkedBusinessObjects": ["结算单", "计提单", "收货记录", "折让比例"],
+          "linkedBusinessObjects": ["结算单", "计提单", "收货记录", "折让后M²不含税单价"],
           "outboundRoutes": ["#/rebate/settlements"],
           "keyInteractions": ["结算年月与计提年月分开选择", "按公司、供应商、玻璃和计提年月匹配计提单", "获取收货记录并保留负数", "保存生成S单号并提交SAP"]
         },
@@ -122,7 +122,7 @@
           "dataKeys": ["rebateSettlements"],
           "linkedBusinessObjects": ["结算单", "编辑稿", "SAP生效版本", "收货明细", "对账占用"],
           "outboundRoutes": ["#/rebate/settlements"],
-          "keyInteractions": ["编辑稿、SAP版本和历史版本切换", "折让比例可编辑并逐行重算", "完整查看收货明细、面积和M²不含税单价", "SAP返回失败原因时保留编辑稿且不生成新正式版本"]
+          "keyInteractions": ["编辑稿、SAP版本和历史版本切换", "折让后M²不含税单价可编辑并逐行重算", "完整查看收货明细、面积和M²不含税单价", "SAP返回失败原因时保留编辑稿且不生成新正式版本"]
         },
         {
           "path": "#/rebate/reconciliation-demo",

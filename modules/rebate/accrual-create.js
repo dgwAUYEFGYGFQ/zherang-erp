@@ -7,7 +7,7 @@
   }
 
   function roundMoney(value) {
-    return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+    return Math.round((Number(value || 0) + Number.EPSILON) * 10000) / 10000;
   }
 
   function formatDateTime() {
@@ -86,7 +86,7 @@
           companyCode: 'CN01',
           supplier: '嘉兴光伏玻璃制造有限公司',
           currency: 'CNY',
-          discountRate: 8,
+          discountUnitPrice: 26.7000,
           remark: '按2026年8月玻璃采购协议计提折让。'
         },
         companyOptions: [
@@ -106,25 +106,31 @@
           companyCode: [{ required: true, message: '请选择公司代码', trigger: 'change' }],
           supplier: [{ required: true, message: '请选择供应商', trigger: 'change' }],
           currency: [{ required: true, message: '请选择币种', trigger: 'change' }],
-          discountRate: [{ required: true, type: 'number', min: 0.01, message: '折让比例必须大于0', trigger: 'change' }]
+          discountUnitPrice: [{ required: true, type: 'number', message: '请输入折让后M²不含税单价', trigger: 'change' }]
         }
       };
     },
     computed: {
       originalAmount() {
-        return roundMoney(this.receiptLines.reduce((sum, item) => sum + Number(item.amount || 0), 0));
+        return roundMoney(this.displayedLines.reduce((sum, item) => sum + Number(item.amount || 0), 0));
       },
       discountAmount() {
-        return roundMoney(this.originalAmount * Number(this.form.discountRate || 0) / 100);
+        return roundMoney(this.displayedLines.reduce((sum, item) => sum + Number(item.discountAmount || 0), 0));
       },
       afterAmount() {
-        return roundMoney(this.originalAmount - this.discountAmount);
+        return roundMoney(this.displayedLines.reduce((sum, item) => sum + Number(item.afterAmount || 0), 0));
       },
       displayedLines() {
         return this.receiptLines.map((source) => {
           const line = deepClone(source);
-          line.discountAmount = roundMoney(Number(line.amount || 0) * Number(this.form.discountRate || 0) / 100);
-          line.afterAmount = roundMoney(Number(line.amount || 0) - line.discountAmount);
+          const amount = roundMoney(Number(line.amount || 0));
+          const area = Number(line.area || 0);
+          const unitPrice = Number(this.form.discountUnitPrice ?? 0);
+          line.amount = amount;
+          line.m2UntaxedUnitPrice = area === 0 ? 0 : roundMoney(amount / area);
+          line.discountUnitPrice = roundMoney(unitPrice);
+          line.afterAmount = roundMoney(area * unitPrice);
+          line.discountAmount = roundMoney(amount - line.afterAmount);
           return line;
         });
       }
@@ -167,10 +173,6 @@
           return;
         }
         if (!this.checkMonthUniqueness(true)) return;
-        if (this.hasFetched) {
-          ElementPlus.ElMessage.info('当前年月与玻璃品类的收货记录已是最新');
-          return;
-        }
         this.receiptLines = deepClone(this.sourceReceiptLines).filter((item) => {
           return (!item.companyCode || item.companyCode === this.form.companyCode)
             && (!item.supplier || item.supplier === this.form.supplier)
@@ -190,6 +192,23 @@
           }
           if (!this.receiptLines.length) {
             ElementPlus.ElMessage.warning('请先获取与计提年月、玻璃品类匹配的收货记录');
+            this.activeTab = 'receipts';
+            return;
+          }
+          if (this.form.discountUnitPrice === null || this.form.discountUnitPrice === undefined || this.form.discountUnitPrice === '') {
+            ElementPlus.ElMessage.warning('请输入折让后M²不含税单价');
+            return;
+          }
+          const invalidLine = this.receiptLines.find((line) => {
+            const area = Number(line.area);
+            const amount = Number(line.amount);
+            return (Number.isNaN(area) || Number.isNaN(amount))
+              || ((area === 0 || line.area === '' || line.area == null) && amount !== 0)
+              || (area !== 0 && (line.amount === '' || line.amount == null));
+          });
+          if (invalidLine) {
+            const lineIndex = this.receiptLines.indexOf(invalidLine) + 1;
+            ElementPlus.ElMessage.warning('第' + lineIndex + '行收货记录缺少有效玻璃面积或原金额，无法计算折后金额');
             this.activeTab = 'receipts';
             return;
           }
@@ -238,10 +257,7 @@
         });
       },
       formatMoney(value) {
-        return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      },
-      formatRate(value) {
-        return Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + '%';
+        return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
       }
     },
     template: `
@@ -263,7 +279,7 @@
             <div class="rebate-create-heading">【计提】折让计提单</div>
             <el-tag size="small" :type="submitted ? 'success' : saved ? 'warning' : 'info'">{{ form.status }}</el-tag>
           </div>
-          <div class="rebate-create-rule"><i class="ri-information-line"></i><span>先选择计提年月、公司代码和供应商，系统按“年月＋公司代码＋供应商＋玻璃”获取收货记录；填写折让比例后实时计算折让金额。保存草稿生成单号，提交SAP时生成V1。</span></div>
+          <div class="rebate-create-rule"><i class="ri-information-line"></i><span>先选择计提年月、公司代码和供应商，系统按“年月＋公司代码＋供应商＋玻璃”获取收货记录；填写折让后M²不含税单价后实时计算折后金额和折让金额。保存草稿生成单号，提交SAP时生成V1。</span></div>
           <el-alert v-if="monthDuplicate" class="rebate-create-month-alert" type="error" :closable="false" show-icon :title="form.accrualMonth + ' 已存在计提单 ' + monthDuplicate.id + '，每个计提年月只能创建一张计提单，请直接进入原单据处理。'"></el-alert>
           <div class="rebate-create-form-wrap">
             <el-form ref="createFormRef" :model="form" :rules="formRules" label-position="top" size="small">
@@ -276,7 +292,7 @@
                 <el-form-item label="公司代码" prop="companyCode" class="rebate-create-editable"><el-select v-model="form.companyCode" style="width:100%" :disabled="submitted" :teleported="false"><el-option v-for="item in companyOptions" :key="item.value" :label="item.label" :value="item.value"></el-option></el-select></el-form-item>
                 <el-form-item label="供应商" prop="supplier" class="rebate-create-editable"><el-select v-model="form.supplier" style="width:100%" :disabled="submitted" :teleported="false"><el-option v-for="item in supplierOptions" :key="item.value" :label="item.label" :value="item.value"></el-option></el-select></el-form-item>
                 <el-form-item label="币种" prop="currency" class="rebate-create-editable"><el-select v-model="form.currency" style="width:100%" :disabled="submitted" :teleported="false"><el-option v-for="item in currencyOptions" :key="item.value" :label="item.label" :value="item.value"></el-option></el-select></el-form-item>
-                <el-form-item label="折让比例" prop="discountRate" class="rebate-create-editable"><el-input-number v-model="form.discountRate" :min="0" :max="100" :precision="2" :step="0.5" :disabled="submitted" style="width:100%"></el-input-number></el-form-item>
+                <el-form-item label="折让后M²不含税单价" prop="discountUnitPrice" class="rebate-create-editable"><el-input-number v-model="form.discountUnitPrice" :precision="4" :step="0.0001" :disabled="submitted" style="width:100%"></el-input-number></el-form-item>
                 <el-form-item label="收货记录数"><el-input :model-value="receiptLines.length + ' 条'" disabled></el-input></el-form-item>
               </div>
 
@@ -308,7 +324,10 @@
                 <el-table-column prop="material" label="物料编码" width="112"></el-table-column>
                 <el-table-column prop="materialName" label="物料名称" min-width="170" show-overflow-tooltip></el-table-column>
                 <el-table-column prop="quantity" label="数量" width="96" align="right"><template v-slot:default="scope">{{ Number(scope.row.quantity || 0).toLocaleString('zh-CN') }}</template></el-table-column>
+                <el-table-column prop="area" label="面积" width="104" align="right"><template v-slot:default="scope">{{ Number(scope.row.area || 0).toFixed(4) }}</template></el-table-column>
                 <el-table-column prop="unitPrice" label="单价" width="94" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.unitPrice) }}</template></el-table-column>
+                <el-table-column prop="m2UntaxedUnitPrice" label="原M²不含税单价" width="142" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.m2UntaxedUnitPrice) }}</template></el-table-column>
+                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="160" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountUnitPrice) }}</template></el-table-column>
                 <el-table-column prop="amount" label="原金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.amount) }}</template></el-table-column>
                 <el-table-column prop="discountAmount" label="折让金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountAmount) }}</template></el-table-column>
                 <el-table-column prop="afterAmount" label="折后金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.afterAmount) }}</template></el-table-column>
@@ -330,30 +349,30 @@
     breadcrumbs: ['折让管理', '计提单管理', '新增计提单'],
     templateId: 'query-table-list-page',
     archetype: '全页业务创建（沿用查询表格视觉基线）',
-    tabInfo: '帮助采购结算专员新建玻璃计提单、获取收货记录、填写折让比例并保存草稿或同步SAP。',
+    tabInfo: '帮助采购结算专员新建玻璃计提单、获取收货记录、填写折让后M²不含税单价并保存草稿或同步SAP。',
     guideSteps: [
       { target: '[data-tour="rebate-create-toolbar"]', title: '保存或提交计提单', description: '顶部操作条集中完成保存草稿、提交并同步SAP以及返回计提单管理。' },
       { target: '[data-tour="rebate-create-form"]', title: '填写计提头信息', description: '选择计提年月、公司代码、供应商和币种；品类默认玻璃且不可修改。' },
       { target: '[data-tour="rebate-create-receipts"]', title: '获取匹配收货记录', description: '按计提年月、公司代码、供应商与玻璃品类获取真实收货记录，并汇总原金额。' },
-      { target: '[data-tour="rebate-create-form"] .rebate-create-editable', title: '录入折让比例', description: '填写折让比例后，头部汇总和每条收货记录的折让金额、折后金额都会实时重算。' },
+      { target: '[data-tour="rebate-create-form"] .rebate-create-editable', title: '录入折让后M²不含税单价', description: '填写折让后M²不含税单价后，头部汇总和每条收货记录的折让金额、折后金额都会实时重算。' },
       { target: '[data-tour="rebate-create-toolbar"] .rebate-create-toolbar-actions', title: '生成单号与正式版本', description: '保存草稿后生成A260916009；提交SAP成功后生成V1并将状态更新为已同步。' }
     ],
     noteSections: [
       {
         title: '业务目标',
-        content: '本页帮助采购结算专员新建玻璃折让计提单，通过年月和品类获取收货记录，录入折让比例并保存或提交SAP。',
+        content: '本页帮助采购结算专员新建玻璃折让计提单，通过年月和品类获取收货记录，录入折让后M²不含税单价并保存或提交SAP。',
         items: ['品类固定为玻璃；计提单号由系统在保存草稿时按“A＋6位日期＋3位流水号”生成。', '本次主演新建业务例生成单号A260916009，首次提交SAP生成正式版本V1。']
       },
       {
         title: '创建流程',
-        content: '新建计提单先补全头信息，再获取匹配收货记录、录入折让比例并确认金额，最后保存草稿或提交SAP。',
+        content: '新建计提单先补全头信息，再获取匹配收货记录、录入折让后M²不含税单价并确认金额，最后保存草稿或提交SAP。',
         diagram: {
           type: 'flow',
           caption: '新增计提单从头信息到SAP V1的业务流程。',
           nodes: [
             { id: 'create', title: '新建计提', meta: '选择年月与公司', tone: 'info' },
             { id: 'receipt', title: '获取收货', meta: '按年月＋玻璃匹配', tone: 'info' },
-            { id: 'rate', title: '录入比例', meta: '实时重算折让金额', tone: 'warning' },
+            { id: 'rate', title: '录入折后单价', meta: '实时重算折让金额', tone: 'warning' },
             { id: 'draft', title: '保存草稿', meta: '生成A260916009', tone: 'neutral' },
             { id: 'sap', title: 'SAP V1', meta: '提交成功后生效', tone: 'success' }
           ],
@@ -374,7 +393,7 @@
           center: { title: '新增计提单', meta: '取数、计算、保存、提交', tone: 'primary' },
           upstream: [
             { title: '收货记录', meta: '提供数量、价格和原金额', tone: 'info' },
-            { title: '折让协议', meta: '提供折让比例依据', tone: 'warning' }
+            { title: '折让协议', meta: '提供折让后M²不含税单价依据', tone: 'warning' }
           ],
           downstream: [
             { title: 'SAP计提', meta: '接收首次正式版本V1', tone: 'success' },
@@ -384,7 +403,7 @@
       },
       {
         title: '关键规则',
-        items: ['计提年月全局唯一；选择年月时立即提示已存在单号，保存与提交时再次校验，重复月份不得生成新的A单号。', '未选择计提年月、公司代码、供应商、币种或折让比例时不可保存和提交。', '未获取收货记录时不可保存和提交；重复获取同一年月与品类不会重复追加数据。', '折让金额按收货记录原金额乘折让比例逐行计算，折后金额等于原金额减折让金额。', '保存草稿只生成计提单号，不生成版本号；首次提交SAP成功后才生成V1。']
+        items: ['计提年月全局唯一；选择年月时立即提示已存在单号，保存与提交时再次校验，重复月份不得生成新的A单号。', '未选择计提年月、公司代码、供应商、币种或折让后M²不含税单价时不可保存和提交；0和负数单价均为有效值。', '未获取收货记录时不可保存和提交；重复获取同一年月与品类会刷新结果，不重复追加数据。', '原M²不含税单价按原金额÷面积计算；折后金额按面积×折让后M²不含税单价计算；折让金额等于原金额减折后金额，允许为负数。', '面积为空或为0且原金额不为0时阻断保存和提交；面积和原金额同时为0时允许保留。', '保存草稿只生成计提单号，不生成版本号；首次提交SAP成功后才生成V1。']
       }
     ]
   });

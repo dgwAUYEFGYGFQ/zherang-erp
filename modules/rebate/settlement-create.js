@@ -13,13 +13,13 @@
   ];
 
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
-  function moneyRound(value) { return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100; }
+  function moneyRound(value) { return Math.round((Number(value || 0) + Number.EPSILON) * 10000) / 10000; }
 
   ChintPrototypeShell.registerPageComponent(componentName, {
     name: componentName,
     data() {
       return {
-        form: { id: '', settlementMonth: '2026-11', accrualMonth: '2026-09', companyCode: 'CN01', supplier: '嘉兴光伏玻璃制造有限公司', category: '玻璃', currency: 'CNY', discountRate: 10, accrualId: '', occupancyStatus: '未占用', syncStatus: '草稿', sapVersion: '—' },
+        form: { id: '', settlementMonth: '2026-11', accrualMonth: '2026-09', companyCode: 'CN01', supplier: '嘉兴光伏玻璃制造有限公司', category: '玻璃', currency: 'CNY', discountUnitPrice: 22.0000, accrualId: '', occupancyStatus: '未占用', syncStatus: '草稿', sapVersion: '—' },
         companyOptions: ['CN01', 'CN02'],
         supplierOptions: ['嘉兴光伏玻璃制造有限公司', '湖州新能源玻璃有限公司', '安徽高透光伏材料有限公司'],
         currencyOptions: ['CNY', 'USD'],
@@ -39,7 +39,7 @@
       canSubmit() { return this.saved && this.form.id && this.lines.length && this.form.syncStatus !== '已同步'; }
     },
     watch: {
-      'form.discountRate': function () { this.recalculate(); this.markChanged(); },
+      'form.discountUnitPrice': function () { this.recalculate(); this.markChanged(); },
       'form.companyCode': function () { this.clearMatch(); },
       'form.supplier': function () { this.clearMatch(); },
       'form.accrualMonth': function () { this.clearMatch(); },
@@ -82,15 +82,20 @@
             && (!line.companyCode || line.companyCode === this.form.companyCode)
             && (!line.supplier || line.supplier === this.form.supplier)
             && (!line.category || line.category === '玻璃');
-        }).map((line) => ({ ...line, m2UntaxedPrice: Number(line.m2UntaxedPrice != null ? line.m2UntaxedPrice : (line.m2UnitPrice != null ? line.m2UnitPrice : line.unitPrice || 0)) }));
+        }).map((line) => ({ ...line, amount: moneyRound(line.amount), m2UntaxedPrice: Number(line.area || 0) === 0 ? 0 : moneyRound(Number(line.amount || 0) / Number(line.area || 0)), discountUnitPrice: moneyRound(Number(this.form.discountUnitPrice ?? 0)) }));
         this.recalculate(); this.saved = false; this.candidateDialogOpen = false;
         ElementPlus.ElMessage.success((automatic ? '已自动匹配计提单 ' : '已选择计提单 ') + row.id + '，并获取 ' + this.lines.length + ' 条收货记录');
       },
       recalculate() {
-        const rate = Number(this.form.discountRate || 0) / 100;
+        const unitPrice = Number(this.form.discountUnitPrice ?? 0);
         this.lines.forEach((line) => {
-          line.discountAmount = moneyRound(Number(line.amount || 0) * rate);
-          line.afterAmount = moneyRound(Number(line.amount || 0) - line.discountAmount);
+          const amount = moneyRound(Number(line.amount || 0));
+          const area = Number(line.area || 0);
+          line.amount = amount;
+          line.m2UntaxedPrice = area === 0 ? 0 : moneyRound(amount / area);
+          line.discountUnitPrice = moneyRound(unitPrice);
+          line.afterAmount = moneyRound(area * unitPrice);
+          line.discountAmount = moneyRound(amount - line.afterAmount);
         });
       },
       validateReady(callback) {
@@ -101,6 +106,18 @@
           this.duplicateMessage = this.existingSettlementMessage();
           if (this.duplicateMessage) return ElementPlus.ElMessage.error(this.duplicateMessage);
           if (!this.form.accrualId || !this.lines.length) return ElementPlus.ElMessage.warning('请先匹配计提单并获取收货记录');
+          if (this.form.discountUnitPrice === null || this.form.discountUnitPrice === undefined || this.form.discountUnitPrice === '') return ElementPlus.ElMessage.warning('请输入折让后M²不含税单价');
+          const invalidLine = this.lines.find((line) => {
+            const area = Number(line.area);
+            const amount = Number(line.amount);
+            return Number.isNaN(area) || Number.isNaN(amount)
+              || ((area === 0 || line.area === '' || line.area == null) && amount !== 0)
+              || (area !== 0 && (line.amount === '' || line.amount == null));
+          });
+          if (invalidLine) {
+            const lineIndex = this.lines.indexOf(invalidLine) + 1;
+            return ElementPlus.ElMessage.warning('第' + lineIndex + '行收货记录缺少有效玻璃面积或原金额，无法计算折后金额');
+          }
           callback();
         });
       },
@@ -123,8 +140,8 @@
         }).catch(() => {});
       },
       backList() { this.$emit('navigate', '#/rebate/settlements'); },
-      money(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
-      area(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      money(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); },
+      area(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); }
     },
     template: `
       <div class="flow-progress-layout">
@@ -140,7 +157,7 @@
                 <el-form-item label="供应商" prop="supplier"><el-select v-model="form.supplier" style="width:100%" filterable :teleported="false"><el-option v-for="item in supplierOptions" :key="item" :label="item" :value="item"></el-option></el-select></el-form-item>
                 <el-form-item label="品类"><el-input v-model="form.category" disabled></el-input></el-form-item>
                 <el-form-item label="币种"><el-select v-model="form.currency" style="width:100%" :teleported="false"><el-option v-for="item in currencyOptions" :key="item" :label="item" :value="item"></el-option></el-select></el-form-item>
-                <el-form-item label="折让比例"><el-input-number v-model="form.discountRate" :min="0" :max="100" :precision="2" :step="0.5" style="width:100%"></el-input-number></el-form-item>
+                <el-form-item label="折让后M²不含税单价"><el-input-number v-model="form.discountUnitPrice" :precision="4" :step="0.0001" style="width:100%"></el-input-number></el-form-item>
                 <el-form-item label="关联计提单"><el-input :model-value="form.accrualId || '请先获取收货记录'" disabled><template v-slot:append><el-button @click="getReceipts">匹配</el-button></template></el-input></el-form-item>
                 <el-form-item label="占用状态"><el-input v-model="form.occupancyStatus" disabled></el-input></el-form-item>
                 <el-form-item label="SAP生效版本"><el-input v-model="form.sapVersion" disabled></el-input></el-form-item>
@@ -163,7 +180,7 @@
             <div class="flow-grid-table-wrap">
               <el-table class="flow-grid-table" :data="lines" row-key="materialDoc" height="100%" min-height="220" stripe border empty-text="请点击“获取收货记录”" style="width:100%">
                 <el-table-column prop="materialDoc" label="物料凭证" width="112"></el-table-column><el-table-column prop="item" label="行项目" width="76"></el-table-column><el-table-column prop="receiptDate" label="入库日期" width="108"></el-table-column><el-table-column prop="purchaseOrder" label="采购订单" width="112"></el-table-column><el-table-column prop="materialName" label="物料" min-width="180" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="quantity" label="数量" width="100" align="right"><template v-slot:default="scope">{{ money(scope.row.quantity) }}</template></el-table-column><el-table-column prop="unitPrice" label="单价" width="96" align="right"><template v-slot:default="scope">{{ money(scope.row.unitPrice) }}</template></el-table-column><el-table-column prop="area" label="面积(m²)" width="110" align="right"><template v-slot:default="scope">{{ area(scope.row.area) }}</template></el-table-column><el-table-column prop="m2UntaxedPrice" label="M²不含税单价" width="130" align="right"><template v-slot:default="scope">{{ Number(scope.row.m2UntaxedPrice != null ? scope.row.m2UntaxedPrice : (scope.row.m2UnitPrice != null ? scope.row.m2UnitPrice : scope.row.unitPrice || 0)).toFixed(4) }}</template></el-table-column><el-table-column prop="amount" label="原金额" width="118" align="right"><template v-slot:default="scope">{{ money(scope.row.amount) }}</template></el-table-column><el-table-column prop="discountAmount" label="折让金额" width="118" align="right"><template v-slot:default="scope">{{ money(scope.row.discountAmount) }}</template></el-table-column><el-table-column prop="afterAmount" label="折后金额" width="118" align="right"><template v-slot:default="scope">{{ money(scope.row.afterAmount) }}</template></el-table-column>
+                <el-table-column prop="quantity" label="数量" width="100" align="right"><template v-slot:default="scope">{{ money(scope.row.quantity) }}</template></el-table-column><el-table-column prop="unitPrice" label="单价" width="96" align="right"><template v-slot:default="scope">{{ money(scope.row.unitPrice) }}</template></el-table-column><el-table-column prop="area" label="面积(m²)" width="110" align="right"><template v-slot:default="scope">{{ area(scope.row.area) }}</template></el-table-column><el-table-column prop="m2UntaxedPrice" label="原M²不含税单价" width="142" align="right"><template v-slot:default="scope">{{ money(scope.row.m2UntaxedPrice) }}</template></el-table-column><el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="160" align="right"><template v-slot:default="scope">{{ money(scope.row.discountUnitPrice) }}</template></el-table-column><el-table-column prop="amount" label="原金额" width="118" align="right"><template v-slot:default="scope">{{ money(scope.row.amount) }}</template></el-table-column><el-table-column prop="discountAmount" label="折让金额" width="118" align="right"><template v-slot:default="scope">{{ money(scope.row.discountAmount) }}</template></el-table-column><el-table-column prop="afterAmount" label="折后金额" width="118" align="right"><template v-slot:default="scope">{{ money(scope.row.afterAmount) }}</template></el-table-column>
               </el-table>
             </div>
             <div class="table-footer"><span style="font-size:12px;color:var(--el-text-color-secondary)">共 {{ lines.length }} 条；退货数量、金额及折让金额均保留负号</span></div>
@@ -185,7 +202,7 @@
     breadcrumbs: ['折让管理', '结算单管理', '新增结算单'], templateId: 'query-table-list-page', archetype: '独立业务表单页',
     tabInfo: '帮助采购结算专员匹配已同步计提单、获取收货记录并生成折让结算单。',
     guideSteps: [
-      { target: '[data-tour="settlement-create-form"]', title: '填写结算条件', description: '分别填写结算年月和计提年月，再选择公司、供应商、币种与折让比例。' },
+      { target: '[data-tour="settlement-create-form"]', title: '填写结算条件', description: '分别填写结算年月和计提年月，再选择公司、供应商、币种与折让后M²不含税单价。' },
       { target: '[data-tour="settlement-create-form"] .el-input-group__append', title: '匹配计提单', description: '系统只按计提年月匹配唯一的已同步计提单号，不复制计提单明细。' },
       { target: '[data-tour="settlement-create-lines"]', title: '核对收货与金额', description: '获取收货记录后逐行计算折让金额和折后金额，退货记录继续保留负数。' },
       { target: '[data-tour="settlement-create-actions"]', title: '保存并提交SAP', description: '保存生成S开头结算单号，随后提交SAP生成V1生效版本。' }
@@ -194,7 +211,7 @@
       { title: '业务目标', content: '本页帮助采购结算专员从已同步计提单创建玻璃折让结算单，明确区分结算年月与原计提年月。' },
       { title: '状态流转', content: '匹配计提单并获取收货记录后保存草稿，系统生成结算单号；提交SAP成功后形成V1。', diagram: { type: 'flow', nodes: [{ id: 'match', title: '匹配计提', tone: 'info' }, { id: 'receipt', title: '获取收货', tone: 'info' }, { id: 'draft', title: '保存草稿', tone: 'warning' }, { id: 'v1', title: 'SAP V1', tone: 'success' }], edges: [{ from: 'match', to: 'receipt', label: '带出' }, { from: 'receipt', to: 'draft', label: '保存' }, { from: 'draft', to: 'v1', label: '提交' }] } },
       { title: '上下游关系', content: '上游是已同步计提单及其收货快照，下游是SAP结算数据和对账单附加费用。', diagram: { type: 'relation', center: { title: '新增结算单', meta: '折让计算与提交', tone: 'primary' }, upstream: [{ title: '计提单', meta: '提供计提关系', tone: 'info' }, { title: '收货记录', meta: '提供逐行金额', tone: 'info' }], downstream: [{ title: 'SAP', meta: '生成V1', tone: 'success' }, { title: '对账单', meta: '后续选择占用', tone: 'warning' }] } },
-      { title: '关键规则', items: ['同一结算年月只能存在一张结算单，选择年月和保存时各校验一次。', '计提年月只自动带出唯一计提单号，不复制其收货明细；无匹配时不能保存。', '收货记录按结算年月、公司代码、供应商和玻璃品类独立获取。', '折让金额按原金额乘折让比例逐行计算，负数数量和金额不取绝对值；金额统一保留两位。'] }
+      { title: '关键规则', items: ['同一结算年月只能存在一张结算单，选择年月和保存时各校验一次。', '计提年月只自动带出唯一计提单号，不复制其收货明细；无匹配时不能保存。', '收货记录按结算年月、公司代码、供应商和玻璃品类独立获取。', '原M²不含税单价按原金额÷面积计算，折后金额按面积×折让后M²不含税单价计算，折让金额等于原金额减折后金额，允许为负数；金额统一保留四位。'] }
     ]
   });
 })(window);
