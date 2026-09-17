@@ -58,10 +58,6 @@
         this.$emit('navigate', '#/rebate/settlement-detail');
       },
       rowClick(row, column) { if (!column || column.type !== 'selection') this.navigateDetail(row, 'view'); },
-      batchVerify() {
-        if (!this.selectedRows.length) return ElementPlus.ElMessage.warning('请先勾选需要核对的结算单');
-        ElementPlus.ElMessage.success('已完成 ' + this.selectedRows.length + ' 张结算单的SAP与占用状态核对');
-      },
       syncLabel, syncType,
       occupancyLabel(value) { return value === 'occupied' ? '已占用' : '未占用'; },
       money(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); },
@@ -80,7 +76,7 @@
               <el-button size="small" @click="resetFilters">重置</el-button>
             </div>
             <div class="table-toolbar flow-action-bar" data-tour="settlement-list-actions">
-              <div class="toolbar-left"><el-button type="primary" size="small" @click="navigateCreate"><i class="ri-add-line"></i><span>新增结算单</span></el-button><el-button size="small" plain @click="batchVerify">批量核对状态</el-button></div>
+              <div class="toolbar-left"><el-button type="primary" size="small" @click="navigateCreate"><i class="ri-add-line"></i><span>新增结算单</span></el-button></div>
               <div class="toolbar-right" style="font-size:12px;color:var(--el-text-color-secondary)"><i class="ri-information-line"></i> 同步状态与对账占用状态分别管理</div>
             </div>
           </div>
@@ -98,7 +94,7 @@
                 <el-table-column prop="supplier" label="供应商" min-width="210" show-overflow-tooltip></el-table-column>
                 <el-table-column prop="category" label="品类" width="72"></el-table-column>
                 <el-table-column prop="originalAmount" label="原金额" width="120" align="right"><template v-slot:default="scope">{{ money(scope.row.originalAmount) }}</template></el-table-column>
-                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="145" align="right"><template v-slot:default="scope">{{ formatUnitPrice(scope.row.discountUnitPrice) }}</template></el-table-column>
+
                 <el-table-column prop="discountAmount" label="折让金额" width="120" align="right"><template v-slot:default="scope">{{ money(scope.row.discountAmount) }}</template></el-table-column>
                 <el-table-column prop="afterAmount" label="折后金额" width="120" align="right"><template v-slot:default="scope">{{ money(scope.row.afterAmount) }}</template></el-table-column>
                 <el-table-column prop="syncStatus" label="同步状态" width="105"><template v-slot:default="scope"><el-tag size="small" :type="syncType(scope.row.syncStatus)">{{ syncLabel(scope.row.syncStatus) }}</el-tag></template></el-table-column>
@@ -122,7 +118,7 @@
     tabInfo: '帮助采购结算专员查询结算单，并分别识别SAP同步、SAP结算和对账占用状态。',
     guideSteps: [
       { target: '[data-tour="settlement-list-filter"]', title: '筛选结算单', description: '按结算年月、公司、供应商、同步和占用状态定位目标单据。' },
-      { target: '[data-tour="settlement-list-actions"]', title: '新增或批量核对', description: '进入独立新建页生成结算单，或对已勾选单据核对SAP与占用状态。' },
+      { target: '[data-tour="settlement-list-actions"]', title: '新增结算单', description: '进入独立新建页生成结算单。' },
       { target: '[data-tour="settlement-list-table"]', title: '区分同步与占用', description: '同步状态和对账占用状态分列展示，避免把占用关系误判为同步失败。' },
       { target: '[data-tour="settlement-list-table"] .table-actions', title: '进入独立详情', description: '详情和编辑进入完整页面，继续查看版本、明细和SAP失败原因。' }
     ],

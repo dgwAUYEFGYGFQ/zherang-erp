@@ -78,6 +78,7 @@
       line.area = Number(line.area != null ? line.area : line.quantity || 0);
       line.amount = roundMoney(line.amount);
       line.m2UntaxedUnitPrice = Number(line.area || 0) === 0 ? 0 : roundMoney(Number(line.amount || 0) / Number(line.area || 0));
+      line.discountUnitPrice = line.discountUnitPrice ?? line.discountedM2UnitPrice ?? 27.3000;
       return line;
     });
   }
@@ -141,6 +142,7 @@
       const record = normalizeRecord(source);
       const history = createHistory(record);
       const receiptLines = normalizeReceiptLines(pageData.receiptLines || [], record.id === 'A260916001');
+      history.forEach((item) => { item.lines = deepClone(receiptLines).map((line) => ({ ...line, discountUnitPrice: Number(item.unitPrice || 0) })); });
       return {
         record,
         receiptSource: deepClone(receiptLines),
@@ -157,6 +159,9 @@
         sapRemark: record.sapRemark,
         sapVersion: record.sapVersion || 'V1',
         submitting: false,
+        selectedRowKeys: [],
+        batchDialogOpen: false,
+        batchUnitPrice: null,
         lastReceiptFetchTime: '2026-09-16 11:20',
         receiptRefreshAdded: false,
         savedReceiptCount: receiptLines.length
@@ -206,16 +211,17 @@
         return this.isDraftView ? this.draftOriginalAmount : this.sapOriginalAmount;
       },
       displayedLines() {
-        const sources = this.isDraftView ? this.receiptSource : this.sapReceiptSource;
+        const sources = this.isHistoryView && this.selectedHistory ? (this.selectedHistory.lines || this.sapReceiptSource) : (this.isDraftView ? this.receiptSource : this.sapReceiptSource);
         return sources.map((source) => {
           const line = deepClone(source);
           const amount = roundMoney(Number(line.amount || 0));
           const area = Number(line.area || 0);
           line.amount = amount;
           line.m2UntaxedUnitPrice = area === 0 ? 0 : roundMoney(amount / area);
-          line.discountUnitPrice = roundMoney(this.activeUnitPrice);
-          line.afterAmount = roundMoney(area * this.activeUnitPrice);
-          line.discountAmount = roundMoney(amount - line.afterAmount);
+          const price = line.discountUnitPrice;
+          line.discountUnitPrice = price === null || price === undefined || price === '' ? null : roundMoney(price);
+          line.afterAmount = line.discountUnitPrice == null ? null : roundMoney(area * Number(line.discountUnitPrice));
+          line.discountAmount = line.afterAmount == null ? null : roundMoney(amount - line.afterAmount);
           return line;
         });
       },
@@ -238,9 +244,12 @@
         return 'V' + (max + 1);
       },
       hasUnsavedChanges() {
-        return Math.abs(this.draftUnitPrice - this.savedDraftUnitPrice) > 0.0001
+        return JSON.stringify(this.receiptSource.map((line) => line.discountUnitPrice)) !== JSON.stringify(this.sapReceiptSource.map((line) => line.discountUnitPrice))
           || this.draftRemark !== this.savedDraftRemark
           || this.receiptSource.length !== this.savedReceiptCount;
+      },
+      lineDiffersFromSap() {
+        return JSON.stringify(this.receiptSource.map((line) => line.discountUnitPrice)) !== JSON.stringify(this.sapReceiptSource.map((line) => line.discountUnitPrice));
       }
     },
     mounted() {
@@ -273,6 +282,9 @@
         this.activeTab = 'receipts';
         ElementPlus.ElMessage.success('已切换为' + row.version + '完整快照，只读查看');
       },
+      onSelectionChange(rows) { this.selectedRowKeys = rows.map((row) => row.materialDoc + '-' + row.item); },
+      updateLinePrice(row, value) { const target = this.receiptSource.find((line) => line.materialDoc + '-' + line.item === row.materialDoc + '-' + row.item); if (target) target.discountUnitPrice = value; },
+      applyBatchUnitPrice() { if (!this.selectedRowKeys.length) return ElementPlus.ElMessage.warning('请先勾选收货明细'); if (this.batchUnitPrice === null || this.batchUnitPrice === undefined || this.batchUnitPrice === '') return ElementPlus.ElMessage.warning('请输入折让后M²不含税单价'); const keys = new Set(this.selectedRowKeys); this.receiptSource.forEach((line) => { if (keys.has(line.materialDoc + '-' + line.item)) line.discountUnitPrice = Number(this.batchUnitPrice); }); this.batchDialogOpen = false; this.batchUnitPrice = null; this.selectedRowKeys = []; ElementPlus.ElMessage.success('已批量维护选中收货明细'); },
       saveDraft() {
         if (!this.isDraftView) {
           ElementPlus.ElMessage.warning('SAP生效版本和历史版本均为只读，请返回编辑稿后再保存');
@@ -304,7 +316,7 @@
           return;
         }
         if (!this.validatePricing()) return;
-        if (Math.abs(this.draftUnitPrice - this.sapUnitPrice) < 0.0001 && this.draftRemark === this.sapRemark) {
+        if (!this.lineDiffersFromSap && this.draftRemark === this.sapRemark) {
           ElementPlus.ElMessage.info('编辑稿与SAP生效版本没有差异，无需提交');
           return;
         }
@@ -335,7 +347,7 @@
                 item.sapResult = '同步成功';
               }
             });
-            this.history.unshift({ version: targetVersion, status: 'active', statusLabel: 'SAP生效', unitPrice: this.draftUnitPrice, submitter: '陈静怡', submitTime: now, sapResult: '同步成功，当前生效' });
+            this.history.unshift({ version: targetVersion, status: 'active', statusLabel: 'SAP生效', unitPrice: this.draftUnitPrice, lines: deepClone(this.receiptSource), submitter: '陈静怡', submitTime: now, sapResult: '同步成功，当前生效' });
             this.sapVersion = targetVersion;
             this.sapUnitPrice = this.draftUnitPrice;
             this.sapRemark = this.draftRemark;
@@ -388,10 +400,8 @@
         ElementPlus.ElMessage.success('已按计提年月＋公司代码＋供应商＋玻璃获取1条最新收货记录，金额已重新汇总');
       },
       validatePricing() {
-        if (this.draftUnitPrice === null || this.draftUnitPrice === undefined || this.draftUnitPrice === '') {
-          ElementPlus.ElMessage.warning('请输入折让后M²不含税单价');
-          return false;
-        }
+        const missingPrice = this.receiptSource.find((line) => line.discountUnitPrice === null || line.discountUnitPrice === undefined || line.discountUnitPrice === '');
+        if (missingPrice) { const idx = this.receiptSource.indexOf(missingPrice) + 1; ElementPlus.ElMessage.warning('第' + idx + '行未维护折让后M²不含税单价'); this.activeTab = 'receipts'; return false; }
         const invalidLine = this.receiptSource.find((line) => {
           const area = Number(line.area);
           const amount = Number(line.amount);
@@ -460,7 +470,7 @@
             <span v-else>当前展示 {{ selectedHistory.version }} 提交时的完整快照；即使同步失败，也保留当次提交内容供追溯。</span>
           </div>
 
-          <div v-if="isHistoryView" class="rebate-history-view-banner"><span><i class="ri-history-line"></i> 已进入 {{ selectedHistory.version }} 历史快照，头信息、汇总金额与收货明细均按该版本折让后M²不含税单价展示。</span></div>
+          <div v-if="isHistoryView" class="rebate-history-view-banner"><span><i class="ri-history-line"></i> 已进入 {{ selectedHistory.version }} 历史快照，头信息、汇总金额与收货明细均按该版本逐行折让后M²不含税单价展示。</span></div>
 
           <div class="rebate-detail-form-wrap">
             <div class="rebate-detail-section-title"><span>基本信息</span><el-tag size="small" :type="viewTagType()">{{ viewTitle }}</el-tag></div>
@@ -482,10 +492,6 @@
               <div class="rebate-detail-section-title"><span>折让计算</span></div>
               <div class="rebate-detail-form-grid">
                 <el-form-item label="原金额"><el-input :model-value="formatMoney(activeOriginalAmount)" disabled><template v-slot:append>{{ record.currency }}</template></el-input></el-form-item>
-                <el-form-item label="折让后M²不含税单价" :class="{ 'rebate-editable-field': isDraftView }">
-                  <el-input-number v-if="isDraftView" v-model="draftUnitPrice" :precision="4" :step="0.0001" style="width:100%"></el-input-number>
-                  <el-input v-else :model-value="formatUnitPrice(activeUnitPrice)" disabled></el-input>
-                </el-form-item>
                 <el-form-item label="折让计提金额"><el-input :model-value="formatMoney(activeDiscountAmount)" disabled><template v-slot:append>{{ record.currency }}</template></el-input></el-form-item>
                 <el-form-item label="折后金额"><el-input :model-value="formatMoney(activeAfterAmount)" disabled><template v-slot:append>{{ record.currency }}</template></el-input></el-form-item>
                 <el-form-item label="最近修改人 / 时间"><el-input :model-value="record.lastModifiedUser + ' / ' + record.lastModifiedTime" disabled></el-input></el-form-item>
@@ -503,11 +509,11 @@
           <el-tabs v-model="activeTab">
             <el-tab-pane label="收货明细" name="receipts">
               <div class="rebate-detail-table-note">
-                <span>按计提年月＋公司代码＋供应商＋玻璃匹配；折让后M²不含税单价 {{ formatUnitPrice(activeUnitPrice) }} 逐行重算 · 最近获取：{{ lastReceiptFetchTime }}</span>
-                <div style="display:flex;align-items:center;gap:10px;"><span>共 {{ displayedLines.length }} 条收货记录</span><el-button v-if="isDraftView" size="small" type="primary" plain @click="refreshReceipts"><i class="ri-refresh-line"></i><span>获取最新收货记录</span></el-button></div>
+                <span>按计提年月＋公司代码＋供应商＋玻璃匹配；折让后M²不含税单价按明细行维护 · 最近获取：{{ lastReceiptFetchTime }}</span>
+                <div style="display:flex;align-items:center;gap:10px;"><span>共 {{ displayedLines.length }} 条，已选 {{ selectedRowKeys.length }} 条</span><el-button v-if="isDraftView" size="small" :disabled="!selectedRowKeys.length" @click="batchDialogOpen=true">批量维护折让后M²不含税单价</el-button><el-button v-if="isDraftView" size="small" type="primary" plain @click="refreshReceipts"><i class="ri-refresh-line"></i><span>获取最新收货记录</span></el-button></div>
               </div>
-              <el-table class="rebate-detail-table" :data="displayedLines" size="small" stripe border max-height="360" style="width:100%" data-tour="rebate-detail-receipts">
-                <el-table-column prop="materialDoc" label="物料凭证" width="112" fixed="left"></el-table-column>
+              <el-table class="rebate-detail-table" :data="displayedLines" @selection-change="onSelectionChange" size="small" stripe border max-height="360" style="width:100%" data-tour="rebate-detail-receipts">
+                <el-table-column type="selection" width="48" :selectable="() => isDraftView"></el-table-column><el-table-column prop="materialDoc" label="物料凭证" width="112" fixed="left"></el-table-column>
                 <el-table-column prop="item" label="行项目" width="76"></el-table-column>
                 <el-table-column prop="receiptDate" label="入库日期" width="106"></el-table-column>
                 <el-table-column prop="purchaseOrder" label="采购订单" width="112"></el-table-column>
@@ -518,7 +524,7 @@
                 <el-table-column prop="quantity" label="数量" width="96" align="right"><template v-slot:default="scope">{{ Number(scope.row.quantity || 0).toLocaleString('zh-CN') }}</template></el-table-column>
                 <el-table-column prop="area" label="面积" width="100" align="right"><template v-slot:default="scope">{{ Number(scope.row.area || 0).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) }}</template></el-table-column>
                 <el-table-column prop="m2UntaxedUnitPrice" label="原M²不含税单价" width="142" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.m2UntaxedUnitPrice) }}</template></el-table-column>
-                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="160" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountUnitPrice) }}</template></el-table-column>
+                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="205" align="right"><template v-slot:default="scope"><el-input-number v-if="isDraftView" :model-value="scope.row.discountUnitPrice" @change="updateLinePrice(scope.row, $event)" :precision="4" :step="0.0001" controls-position="right" style="width:185px"></el-input-number><span v-else>{{ formatMoney(scope.row.discountUnitPrice) }}</span></template></el-table-column>
                 <el-table-column prop="unitPrice" label="单价" width="94" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.unitPrice) }}</template></el-table-column>
                 <el-table-column prop="amount" label="原金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.amount) }}</template></el-table-column>
                 <el-table-column prop="discountAmount" label="折让金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountAmount) }}</template></el-table-column>
@@ -531,7 +537,6 @@
               <el-table class="rebate-detail-table" :data="historyRows" size="small" stripe border max-height="360" style="width:100%" data-tour="rebate-detail-history">
                 <el-table-column prop="version" label="版本" width="76"></el-table-column>
                 <el-table-column prop="statusLabel" label="状态" width="106"><template v-slot:default="scope"><el-tag size="small" :type="historyTagType(scope.row.status)">{{ scope.row.statusLabel }}</el-tag></template></el-table-column>
-                <el-table-column prop="unitPrice" label="折让后M²不含税单价" width="160" align="right"><template v-slot:default="scope">{{ formatUnitPrice(scope.row.unitPrice) }}</template></el-table-column>
                 <el-table-column prop="discountAmount" label="折让金额" width="126" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountAmount) }}</template></el-table-column>
                 <el-table-column prop="afterAmount" label="折后金额" width="126" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.afterAmount) }}</template></el-table-column>
                 <el-table-column prop="submitter" label="提交人" width="92"></el-table-column>
@@ -543,6 +548,11 @@
 
           </el-tabs>
         </section>
+
+        <el-dialog v-model="batchDialogOpen" title="批量维护折让后M²不含税单价" width="420px">
+          <el-form label-width="145px"><el-form-item label="已选明细数"><span>{{ selectedRowKeys.length }} 条</span></el-form-item><el-form-item label="折让后M²不含税单价"><el-input-number v-model="batchUnitPrice" :precision="4" :step="0.0001" style="width:100%"></el-input-number></el-form-item></el-form>
+          <template v-slot:footer><el-button @click="batchDialogOpen=false">取消</el-button><el-button type="primary" @click="applyBatchUnitPrice">确定</el-button></template>
+        </el-dialog>
 
       </div>
     `

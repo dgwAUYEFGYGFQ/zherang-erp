@@ -78,6 +78,9 @@
         saved: false,
         submitted: false,
         submitting: false,
+        selectedRowKeys: [],
+        batchDialogOpen: false,
+        batchUnitPrice: null,
         form: {
           id: '',
           status: '待保存',
@@ -86,7 +89,7 @@
           companyCode: 'CN01',
           supplier: '嘉兴光伏玻璃制造有限公司',
           currency: 'CNY',
-          discountUnitPrice: 26.7000,
+
           remark: '按2026年8月玻璃采购协议计提折让。'
         },
         companyOptions: [
@@ -106,7 +109,6 @@
           companyCode: [{ required: true, message: '请选择公司代码', trigger: 'change' }],
           supplier: [{ required: true, message: '请选择供应商', trigger: 'change' }],
           currency: [{ required: true, message: '请选择币种', trigger: 'change' }],
-          discountUnitPrice: [{ required: true, type: 'number', message: '请输入折让后M²不含税单价', trigger: 'change' }]
         }
       };
     },
@@ -125,12 +127,12 @@
           const line = deepClone(source);
           const amount = roundMoney(Number(line.amount || 0));
           const area = Number(line.area || 0);
-          const unitPrice = Number(this.form.discountUnitPrice ?? 0);
+          const unitPrice = Number(line.discountUnitPrice ?? 0);
           line.amount = amount;
           line.m2UntaxedUnitPrice = area === 0 ? 0 : roundMoney(amount / area);
-          line.discountUnitPrice = roundMoney(unitPrice);
-          line.afterAmount = roundMoney(area * unitPrice);
-          line.discountAmount = roundMoney(amount - line.afterAmount);
+          line.discountUnitPrice = line.discountUnitPrice === null || line.discountUnitPrice === undefined || line.discountUnitPrice === '' ? null : roundMoney(unitPrice);
+          line.afterAmount = line.discountUnitPrice == null ? null : roundMoney(area * unitPrice);
+          line.discountAmount = line.afterAmount == null ? null : roundMoney(amount - line.afterAmount);
           return line;
         });
       }
@@ -167,6 +169,9 @@
         }
         return !duplicate;
       },
+      onSelectionChange(rows) { this.selectedRowKeys = rows.map((row) => row.materialDoc + '-' + row.item); },
+      updateLinePrice(row, value) { const key = row.materialDoc + '-' + row.item; const target = this.lines.find((line) => line.materialDoc + '-' + line.item === key); if (target) { target.discountUnitPrice = value; } },
+      applyBatchUnitPrice() { if (!this.selectedRowKeys.length) return ElementPlus.ElMessage.warning('请先勾选收货明细'); if (this.batchUnitPrice === null || this.batchUnitPrice === undefined || this.batchUnitPrice === '') return ElementPlus.ElMessage.warning('请输入折让后M²不含税单价'); const keys = new Set(this.selectedRowKeys); this.lines.forEach((line) => { if (keys.has(line.materialDoc + '-' + line.item)) line.discountUnitPrice = Number(this.batchUnitPrice); }); this.batchDialogOpen = false; this.batchUnitPrice = null; this.selectedRowKeys = []; ElementPlus.ElMessage.success('已批量维护选中明细的折让后M²不含税单价'); },
       fetchReceipts() {
         if (!this.form.accrualMonth) {
           ElementPlus.ElMessage.warning('请先选择计提年月');
@@ -195,10 +200,8 @@
             this.activeTab = 'receipts';
             return;
           }
-          if (this.form.discountUnitPrice === null || this.form.discountUnitPrice === undefined || this.form.discountUnitPrice === '') {
-            ElementPlus.ElMessage.warning('请输入折让后M²不含税单价');
-            return;
-          }
+          const missingPrice = this.receiptLines.find((line) => line.discountUnitPrice === null || line.discountUnitPrice === undefined || line.discountUnitPrice === '');
+          if (missingPrice) { const idx = this.receiptLines.indexOf(missingPrice) + 1; ElementPlus.ElMessage.warning('第' + idx + '行未维护折让后M²不含税单价'); this.activeTab = 'receipts'; return; }
           const invalidLine = this.receiptLines.find((line) => {
             const area = Number(line.area);
             const amount = Number(line.amount);
@@ -292,7 +295,7 @@
                 <el-form-item label="公司代码" prop="companyCode" class="rebate-create-editable"><el-select v-model="form.companyCode" style="width:100%" :disabled="submitted" :teleported="false"><el-option v-for="item in companyOptions" :key="item.value" :label="item.label" :value="item.value"></el-option></el-select></el-form-item>
                 <el-form-item label="供应商" prop="supplier" class="rebate-create-editable"><el-select v-model="form.supplier" style="width:100%" :disabled="submitted" :teleported="false"><el-option v-for="item in supplierOptions" :key="item.value" :label="item.label" :value="item.value"></el-option></el-select></el-form-item>
                 <el-form-item label="币种" prop="currency" class="rebate-create-editable"><el-select v-model="form.currency" style="width:100%" :disabled="submitted" :teleported="false"><el-option v-for="item in currencyOptions" :key="item.value" :label="item.label" :value="item.value"></el-option></el-select></el-form-item>
-                <el-form-item label="折让后M²不含税单价" prop="discountUnitPrice" class="rebate-create-editable"><el-input-number v-model="form.discountUnitPrice" :precision="4" :step="0.0001" :disabled="submitted" style="width:100%"></el-input-number></el-form-item>
+
                 <el-form-item label="收货记录数"><el-input :model-value="receiptLines.length + ' 条'" disabled></el-input></el-form-item>
               </div>
 
@@ -312,10 +315,10 @@
             <el-tab-pane label="收货明细" name="receipts">
               <div class="rebate-create-table-head">
                 <span>{{ hasFetched ? ('最近获取：' + lastFetchTime + ' · 共' + receiptLines.length + '条') : '尚未获取收货记录' }}</span>
-                <div class="rebate-create-table-actions"><span>匹配条件：{{ form.accrualMonth || '未选择' }}＋{{ form.companyCode }}＋{{ form.supplier }}＋{{ form.category }}</span><el-button type="primary" size="small" :disabled="submitted" @click="fetchReceipts"><i class="ri-refresh-line"></i><span>获取最新收货记录</span></el-button></div>
+                <div class="rebate-create-table-actions"><span>已选 {{ selectedRowKeys.length }} 条</span><el-button size="small" :disabled="!selectedRowKeys.length" @click="batchDialogOpen = true">批量维护折让后M²不含税单价</el-button><span>匹配条件：{{ form.accrualMonth || '未选择' }}＋{{ form.companyCode }}＋{{ form.supplier }}＋{{ form.category }}</span><el-button type="primary" size="small" :disabled="submitted" @click="fetchReceipts"><i class="ri-refresh-line"></i><span>获取最新收货记录</span></el-button></div>
               </div>
-              <el-table v-if="displayedLines.length" class="rebate-create-table" :data="displayedLines" size="small" stripe border max-height="360" style="width:100%">
-                <el-table-column prop="materialDoc" label="物料凭证" width="112" fixed="left"></el-table-column>
+              <el-table v-if="displayedLines.length" class="rebate-create-table" :data="displayedLines" @selection-change="onSelectionChange" size="small" stripe border max-height="360" style="width:100%">
+                <el-table-column type="selection" width="48" :selectable="() => !submitted"></el-table-column><el-table-column prop="materialDoc" label="物料凭证" width="112" fixed="left"></el-table-column>
                 <el-table-column prop="item" label="行项目" width="76"></el-table-column>
                 <el-table-column prop="receiptDate" label="入库日期" width="106"></el-table-column>
                 <el-table-column prop="purchaseOrder" label="采购订单" width="112"></el-table-column>
@@ -327,7 +330,7 @@
                 <el-table-column prop="area" label="面积" width="104" align="right"><template v-slot:default="scope">{{ Number(scope.row.area || 0).toFixed(4) }}</template></el-table-column>
                 <el-table-column prop="unitPrice" label="单价" width="94" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.unitPrice) }}</template></el-table-column>
                 <el-table-column prop="m2UntaxedUnitPrice" label="原M²不含税单价" width="142" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.m2UntaxedUnitPrice) }}</template></el-table-column>
-                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="160" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountUnitPrice) }}</template></el-table-column>
+                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="190" align="right"><template v-slot:default="scope"><el-input-number v-if="!submitted" :model-value="scope.row.discountUnitPrice" @change="updateLinePrice(scope.row, $event)" :precision="4" :step="0.0001" controls-position="right" style="width:170px"></el-input-number><span v-else>{{ formatMoney(scope.row.discountUnitPrice) }}</span></template></el-table-column>
                 <el-table-column prop="amount" label="原金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.amount) }}</template></el-table-column>
                 <el-table-column prop="discountAmount" label="折让金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountAmount) }}</template></el-table-column>
                 <el-table-column prop="afterAmount" label="折后金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.afterAmount) }}</template></el-table-column>
@@ -336,6 +339,7 @@
             </el-tab-pane>
           </el-tabs>
         </section>
+        <el-dialog v-model="batchDialogOpen" title="批量维护折让后M²不含税单价" width="420px"><el-form label-width="145px"><el-form-item label="已选明细数"><span>{{ selectedRowKeys.length }} 条</span></el-form-item><el-form-item label="折让后M²不含税单价"><el-input-number v-model="batchUnitPrice" :precision="4" :step="0.0001" style="width:100%"></el-input-number></el-form-item></el-form><template v-slot:footer><el-button @click="batchDialogOpen=false">取消</el-button><el-button type="primary" @click="applyBatchUnitPrice">确定</el-button></template></el-dialog>
       </div>
     `
   });

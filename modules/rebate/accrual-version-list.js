@@ -569,9 +569,7 @@
                 <el-table-column prop="originalAmount" label="原金额" width="132" align="right">
                   <template v-slot:default="scope">{{ formatMoney(scope.row.originalAmount) }}</template>
                 </el-table-column>
-                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="126" align="right">
-                  <template v-slot:default="scope">{{ formatUnitPrice(scope.row.discountUnitPrice) }}</template>
-                </el-table-column>
+
                 <el-table-column prop="discountAmount" label="折让计提金额" width="132" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.discountAmount) }}</template></el-table-column>
                 <el-table-column prop="afterAmount" label="折后金额" width="132" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.afterAmount) }}</template></el-table-column>
                 <el-table-column prop="syncStatusLabel" label="同步状态" width="126">
@@ -649,19 +647,9 @@
 
             <div class="rebate-drawer-panel">
               <div class="rebate-panel-title"><span>折让计算</span><span class="rebate-panel-subtitle">面积 × 折让后M²不含税单价 = 折后金额；原金额 − 折后金额 = 折让计提金额</span></div>
-              <el-form v-if="!isSapView" :model="formModel" label-width="92px" size="small">
-                <div class="rebate-rate-form">
-                  <el-form-item label="原金额"><el-input :model-value="formatMoney(formModel.originalAmount)" disabled><template v-slot:append>{{ formModel.currency }}</template></el-input></el-form-item>
-                  <el-form-item label="折让后M²不含税单价" :class="{ 'is-field-changed': unitPriceChanged }">
-                    <el-input-number class="rebate-rate-input" v-model="formModel.discountUnitPrice" :precision="4" :step="0.0001" style="width:100%" @update:model-value="handleRateInput"></el-input-number>
-                    <span v-if="unitPriceChanged" class="rebate-change-mark">SAP为 {{ formatUnitPrice(formModel.sapDiscountUnitPrice) }}</span>
-                  </el-form-item>
-                  <el-form-item label="计算口径"><el-input model-value="按收货记录逐行计算后汇总" disabled></el-input></el-form-item>
-                </div>
-              </el-form>
+              <div class="rebate-rate-form"><el-form-item label="原金额"><el-input :model-value="formatMoney(formModel.originalAmount)" disabled><template v-slot:append>{{ formModel.currency }}</template></el-input></el-form-item><el-form-item label="计算口径"><el-input model-value="按收货明细行维护折让后M²不含税单价后逐行计算" disabled></el-input></el-form-item></div>
               <div class="rebate-summary-grid">
                 <div class="rebate-summary-item"><div class="rebate-summary-label">原金额</div><div class="rebate-summary-value">{{ formatMoney(formModel.originalAmount) }}</div></div>
-                <div class="rebate-summary-item" :class="{ 'is-changed': unitPriceChanged && !isSapView }"><div class="rebate-summary-label">折让后M²不含税单价 <span v-if="unitPriceChanged && !isSapView" class="rebate-change-mark">已修改</span></div><div class="rebate-summary-value">{{ formatUnitPrice(isSapView ? formModel.sapDiscountUnitPrice : formModel.discountUnitPrice) }}</div></div>
                 <div class="rebate-summary-item" :class="{ 'is-changed': unitPriceChanged && !isSapView }"><div class="rebate-summary-label">折让计提金额 <span v-if="unitPriceChanged && !isSapView" class="rebate-change-mark">较SAP {{ signed(currentDiscountAmount - sapDiscountAmount, '') }}</span></div><div class="rebate-summary-value">{{ formatMoney(isSapView ? sapDiscountAmount : currentDiscountAmount) }}</div></div>
                 <div class="rebate-summary-item" :class="{ 'is-changed': unitPriceChanged && !isSapView }"><div class="rebate-summary-label">折后金额 <span v-if="unitPriceChanged && !isSapView" class="rebate-change-mark">较SAP {{ signed(currentAfterAmount - sapAfterAmount, '') }}</span></div><div class="rebate-summary-value">{{ formatMoney(isSapView ? sapAfterAmount : currentAfterAmount) }}</div></div>
                 <div class="rebate-summary-item"><div class="rebate-summary-label">修改字段</div><div class="rebate-summary-value">{{ isSapView ? 0 : headDiffRows.length }} 项</div></div>
@@ -683,7 +671,7 @@
                 <el-table-column prop="quantity" label="数量" width="100" align="right"><template v-slot:default="scope">{{ Number(scope.row.quantity).toLocaleString('zh-CN') }}</template></el-table-column>
                 <el-table-column prop="area" label="面积(m²)" width="108" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.area) }}</template></el-table-column>
                 <el-table-column prop="m2UntaxedPrice" label="原M²不含税单价" width="130" align="right"><template v-slot:default="scope">{{ formatUnitPrice(scope.row.m2UntaxedPrice) }}</template></el-table-column>
-                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="145" align="right"><template v-slot:default="scope">{{ formatUnitPrice(scope.row.discountUnitPrice) }}</template></el-table-column>
+                <el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="150" align="right"><template v-slot:default="scope">{{ formatUnitPrice(isSapView ? (scope.row.sapDiscountUnitPrice ?? scope.row.discountUnitPrice) : scope.row.discountUnitPrice) }}</template></el-table-column>
                 <el-table-column prop="amount" label="原金额" width="118" align="right"><template v-slot:default="scope">{{ formatMoney(scope.row.amount) }}</template></el-table-column>
                 <el-table-column label="折让金额" width="124" align="right"><template v-slot:default="scope"><span :class="{ 'rebate-pending-version': !isSapView && scope.row.changeType === '修改' }">{{ formatMoney(isSapView ? scope.row.sapDiscountAmount : scope.row.discountAmount) }}</span></template></el-table-column>
                 <el-table-column label="折后金额" width="124" align="right"><template v-slot:default="scope">{{ formatMoney(isSapView ? scope.row.sapAfterAmount : scope.row.afterAmount) }}</template></el-table-column>
@@ -711,7 +699,7 @@
               <el-table-column prop="statusLabel" label="状态" width="112">
                 <template v-slot:default="scope"><el-tag size="small" :type="historyTagType(scope.row.status)">{{ scope.row.statusLabel }}</el-tag></template>
               </el-table-column>
-              <el-table-column prop="unitPrice" label="折让后M²不含税单价" width="110" align="right"><template v-slot:default="scope">{{ formatUnitPrice(scope.row.unitPrice) }}</template></el-table-column>
+
               <el-table-column prop="submitter" label="提交人" width="100"></el-table-column>
               <el-table-column prop="submitTime" label="提交时间" width="152"></el-table-column>
               <el-table-column prop="sapResult" label="SAP结果" min-width="230" show-overflow-tooltip></el-table-column>
@@ -722,7 +710,7 @@
             <div v-if="selectedHistory" class="rebate-history-summary">
               <div class="rebate-history-summary-title"><span>{{ selectedHistory.version }} 快照</span><el-tag size="small" :type="historyTagType(selectedHistory.status)">{{ selectedHistory.statusLabel }}</el-tag></div>
               <el-descriptions :column="4" size="small" border>
-                <el-descriptions-item label="折让后M²不含税单价">{{ formatUnitPrice(selectedHistory.unitPrice) }}</el-descriptions-item>
+
                 <el-descriptions-item label="编辑稿单价">{{ formatUnitPrice(formModel.discountUnitPrice) }}</el-descriptions-item>
                 <el-descriptions-item label="单价变化"><span :class="deltaClass(Number(formModel.discountUnitPrice || 0) - Number(selectedHistory.unitPrice || 0))">{{ signed(Number(formModel.discountUnitPrice || 0) - Number(selectedHistory.unitPrice || 0), '') }}</span></el-descriptions-item>
                 <el-descriptions-item label="提交时间">{{ selectedHistory.submitTime }}</el-descriptions-item>

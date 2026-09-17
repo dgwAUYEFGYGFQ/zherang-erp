@@ -33,6 +33,7 @@
       if (source.hasDraft == null) source.hasDraft = source.currentVersion !== source.sapVersion || ['pending-resubmit', 'resubmit-failed', 'sync-failed'].includes(source.syncStatus);
       const form = clone(source);
       return {
+        selectedRowKeys: [], batchDialogOpen: false, batchUnitPrice: null,
         persisted: source, form, activeView: source.hasDraft ? 'current' : 'sap', historyReturnView: source.hasDraft ? 'current' : 'sap', detailTab: 'receipts', historyVersion: source.sapVersion,
         lines: [],
         history: [{ version: source.sapVersion, unitPrice: source.sapDiscountUnitPrice, status: 'SAP同步成功', time: source.lastSyncTime, operator: '陈静怡' }],
@@ -40,7 +41,7 @@
         companyOptions: ['CN01', 'CN02'], currencyOptions: ['CNY', 'USD']
       };
     },
-    created() { this.lines = this.makeLines(); },
+    created() { this.lines = this.makeLines(); this.persisted.lines = clone(this.lines); this.persisted.sapLines = clone(this.lines); if (this.history[0]) this.history[0].lines = clone(this.lines); },
     computed: {
       selectedSnapshot() {
         if (this.activeView === 'sap') return { version: this.form.sapVersion, unitPrice: this.form.sapDiscountUnitPrice, status: 'SAP生效版本', time: this.form.lastSyncTime, operator: '陈静怡' };
@@ -49,20 +50,15 @@
       },
       viewUnitPrice() { return Number(this.selectedSnapshot ? this.selectedSnapshot.unitPrice : 0); },
       viewLines() {
-        const unitPrice = this.viewUnitPrice;
-        return this.lines.map((item) => {
-          const amount = round(item.amount);
-          const area = Number(item.area || 0);
-          const afterAmount = round(area * unitPrice);
-          return { ...item, amount, m2UntaxedPrice: area === 0 ? 0 : round(amount / area), discountUnitPrice: round(unitPrice), afterAmount, discountAmount: round(amount - afterAmount) };
-        });
+        const sourceLines = this.activeView === 'history' ? ((this.history.find((item) => item.version === this.historyVersion) || {}).lines || this.lines) : (this.activeView === 'sap' ? (this.persisted.sapLines || this.lines) : this.lines);
+        return sourceLines.map((item) => { const amount = round(item.amount); const area = Number(item.area || 0); const unitPrice = item.discountUnitPrice; const afterAmount = unitPrice === null || unitPrice === undefined || unitPrice === '' ? null : round(area * Number(unitPrice)); return { ...item, amount, m2UntaxedPrice: area === 0 ? 0 : round(amount / area), discountUnitPrice: unitPrice, afterAmount, discountAmount: afterAmount == null ? null : round(amount - afterAmount) }; });
       },
       originalAmount() { return round(this.viewLines.reduce((sum, item) => sum + Number(item.amount || 0), 0)); },
       discountAmount() { return round(this.viewLines.reduce((sum, item) => sum + Number(item.discountAmount || 0), 0)); },
       afterAmount() { return round(this.viewLines.reduce((sum, item) => sum + Number(item.afterAmount || 0), 0)); },
       hasDraft() { return Boolean(this.form.hasDraft || this.form.currentVersion !== this.form.sapVersion || ['draft', 'pending-resubmit', 'resubmit-failed', 'sync-failed'].includes(this.form.syncStatus) || this.hasUnsaved); },
-      hasUnsaved() { return this.receiptRefreshPending || Math.abs(Number(this.form.discountUnitPrice) - Number(this.persisted.discountUnitPrice)) > 0.0001; },
-      differsFromSap() { return Math.abs(Number(this.form.discountUnitPrice) - Number(this.form.sapDiscountUnitPrice)) > 0.0001 || this.form.currentVersion !== this.form.sapVersion; },
+      hasUnsaved() { return this.receiptRefreshPending || JSON.stringify(this.lines.map((line) => line.discountUnitPrice)) !== JSON.stringify((this.persisted.lines || []).map((line) => line.discountUnitPrice)); },
+      differsFromSap() { return JSON.stringify(this.lines.map((line) => line.discountUnitPrice)) !== JSON.stringify((this.persisted.sapLines || this.lines).map((line) => line.discountUnitPrice)) || this.form.currentVersion !== this.form.sapVersion; },
     },
     methods: {
       makeLines() {
@@ -77,10 +73,13 @@
           const category = line.category || '玻璃';
           return settlementMonth === this.form.settlementMonth && companyCode === this.form.companyCode
             && supplier === this.form.supplier && category === '玻璃';
-        }).map((line) => ({ ...line, amount: round(line.amount), m2UntaxedPrice: Number(line.area || 0) === 0 ? 0 : round(Number(line.amount || 0) / Number(line.area || 0)), discountUnitPrice: round(Number(this.form.discountUnitPrice ?? 0)) }));
+        }).map((line) => ({ ...line, amount: round(line.amount), m2UntaxedPrice: Number(line.area || 0) === 0 ? 0 : round(Number(line.amount || 0) / Number(line.area || 0)), discountUnitPrice: line.discountUnitPrice ?? this.form.discountUnitPrice ?? this.form.sapDiscountUnitPrice ?? null }));
       },
       syncLabel(value) { return { synced: '已同步', 'pending-resubmit': '待重新提交', 'resubmit-failed': '同步失败', 'sync-failed': '同步失败' }[value] || '草稿'; },
       syncType(value) { return { synced: 'success', 'pending-resubmit': 'warning', 'resubmit-failed': 'danger', 'sync-failed': 'danger' }[value] || 'info'; },
+      onSelectionChange(rows) { this.selectedRowKeys = rows.map((row) => row.materialDoc + '-' + row.item); },
+      updateLinePrice(row, value) { const target = this.lines.find((line) => line.materialDoc + '-' + line.item === row.materialDoc + '-' + row.item); if (target) target.discountUnitPrice = value; },
+      applyBatchUnitPrice() { if (this.batchUnitPrice === null || this.batchUnitPrice === undefined || this.batchUnitPrice === '') return ElementPlus.ElMessage.warning('请输入折让后M²不含税单价'); const keys = new Set(this.selectedRowKeys); this.lines.forEach((line) => { if (keys.has(line.materialDoc + '-' + line.item)) line.discountUnitPrice = Number(this.batchUnitPrice); }); this.batchDialogOpen = false; this.batchUnitPrice = null; this.selectedRowKeys = []; ElementPlus.ElMessage.success('已批量维护选中收货明细'); },
       saveEdit() {
         if (this.form.occupancyStatus === 'occupied') return ElementPlus.ElMessage.warning('结算单已被对账单' + (this.form.reconciliationId || '') + '占用，暂不可编辑；请先作废原对账单释放。');
         if (this.activeView !== 'current') return ElementPlus.ElMessage.warning('请切换到编辑稿后保存');
@@ -109,10 +108,10 @@
               ElementPlus.ElMessage.error(this.failureMessage);
               return;
             }
-            this.form.sapVersion = this.form.currentVersion; this.form.sapDiscountUnitPrice = this.form.discountUnitPrice;
+            this.form.sapVersion = this.form.currentVersion; this.form.sapDiscountUnitPrice = null; this.form.sapLines = clone(this.lines);
             this.form.syncStatus = 'synced'; this.form.hasDraft = false; this.form.lastSyncTime = nowText(); this.form.updateTime = this.form.lastSyncTime;
-            this.history.unshift({ version: this.form.sapVersion, unitPrice: this.form.sapDiscountUnitPrice, status: 'SAP同步成功', time: this.form.lastSyncTime, operator: '陈静怡' });
-            this.persisted = clone(this.form); this.failureMessage = '';
+            this.history.unshift({ version: this.form.sapVersion, unitPrice: null, lines: clone(this.lines), status: 'SAP同步成功', time: this.form.lastSyncTime, operator: '陈静怡' });
+            this.persisted = clone(this.form); this.persisted.lines = clone(this.lines); this.failureMessage = '';
             ElementPlus.ElMessage.success('SAP同步成功，生效版本更新为' + this.form.sapVersion);
           }, 800);
         }).catch(() => {});
@@ -125,32 +124,18 @@
         if (this.activeView !== 'current') return ElementPlus.ElMessage.warning('请先返回编辑稿，再获取最新收货记录');
         const latest = this.makeLines();
         if (!latest.length) return ElementPlus.ElMessage.warning('未获取到符合当前结算条件的最新收货记录');
-        this.lines = latest; this.receiptRefreshPending = true;
+        const oldByKey = new Map(this.lines.map((line) => [line.materialDoc + '-' + line.item, line.discountUnitPrice]));
+        this.lines = latest.map((line) => ({ ...line, discountUnitPrice: oldByKey.has(line.materialDoc + '-' + line.item) ? oldByKey.get(line.materialDoc + '-' + line.item) : null })); this.receiptRefreshPending = true;
         ElementPlus.ElMessage.success('已按结算年月、公司代码、供应商和玻璃品类获取最新收货记录，请保存编辑稿');
       },
       validatePricing() {
-        const unit = this.form.discountUnitPrice;
-        if (unit === null || unit === undefined || unit === '' || Number.isNaN(Number(unit))) {
-          ElementPlus.ElMessage.warning('请输入折让后M²不含税单价');
-          return false;
-        }
-        const invalid = this.lines.find((line) => {
-          const areaEmpty = line.area === null || line.area === undefined || line.area === '';
-          const amountEmpty = line.amount === null || line.amount === undefined || line.amount === '';
-          const area = Number(line.area || 0);
-          const amount = Number(line.amount || 0);
-          return ((areaEmpty || area === 0) && !amountEmpty && amount !== 0) || (area !== 0 && amountEmpty);
-        });
-        if (invalid) {
-          ElementPlus.ElMessage.warning('该明细缺少有效玻璃面积或原金额，无法计算折后金额');
-          return false;
-        }
+        const missing = this.lines.find((line) => line.discountUnitPrice === null || line.discountUnitPrice === undefined || line.discountUnitPrice === ''); if (missing) { ElementPlus.ElMessage.warning('存在明细未维护折让后M²不含税单价'); return false; } const invalid = this.lines.find((line) => { const areaEmpty = line.area === null || line.area === undefined || line.area === ''; const amountEmpty = line.amount === null || line.amount === undefined || line.amount === ''; const area = Number(line.area || 0); const amount = Number(line.amount || 0); return ((areaEmpty || area === 0) && !amountEmpty && amount !== 0) || (area !== 0 && amountEmpty); }); if (invalid) { ElementPlus.ElMessage.warning('该明细缺少有效玻璃面积或原金额，无法计算折后金额'); return false; }
         return true;
       },
       money(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); },
       formatUnitPrice(value) { return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); },
-      historyDiscount(item) { return round(this.originalAmount - this.historyAfter(item)); },
-      historyAfter(item) { return round(this.lines.reduce((sum, line) => sum + round(Number(line.area || 0) * Number(item.unitPrice || 0)), 0)); },
+      historyDiscount(item) { const lines = item.lines || this.lines; const original = round(lines.reduce((sum, line) => sum + round(line.amount), 0)); return round(original - this.historyAfter(item)); },
+      historyAfter(item) { const lines = item.lines || this.lines; return round(lines.reduce((sum, line) => sum + round(Number(line.afterAmount ?? (Number(line.area || 0) * Number(line.discountUnitPrice || 0)))), 0)); },
       signed(value, suffix) { const n = Number(value || 0); const text = suffix === '%' ? Math.abs(n).toFixed(2).replace(/\.00$/, '') : this.money(Math.abs(n)); return (n > 0 ? '+' : n < 0 ? '-' : '') + text + (suffix || ''); }
     },
     template: `
@@ -174,19 +159,19 @@
               <el-descriptions-item label="公司代码">{{ form.companyCode }}</el-descriptions-item><el-descriptions-item label="供应商" :span="2">{{ form.supplier }}</el-descriptions-item><el-descriptions-item label="币种">{{ form.currency }}</el-descriptions-item>
             </el-descriptions>
             <el-alert style="margin-top:12px" title="计提年月只用于自动关联唯一计提单号；当前收货明细按结算年月＋公司代码＋供应商＋玻璃品类独立取得，不继承计提单明细。" type="info" :closable="false" show-icon></el-alert>
-            <el-form v-if="activeView === 'current'" :model="form" label-width="96px" size="small" style="margin-top:14px"><div class="form-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:0 18px"><el-form-item label="折让后M²不含税单价"><el-input-number v-model="form.discountUnitPrice" :precision="4" :step="0.0001" style="width:100%"></el-input-number></el-form-item><el-form-item label="SAP折让后M²单价"><el-input :model-value="formatUnitPrice(form.sapDiscountUnitPrice)" disabled></el-input></el-form-item><el-form-item label="占用对账单"><el-input :model-value="form.reconciliationId || '未占用'" disabled></el-input></el-form-item></div></el-form>
-            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px"><div style="padding:11px;background:var(--el-fill-color-light);border-radius:6px"><small>原金额</small><div style="font-size:17px;font-weight:650">{{ money(originalAmount) }}</div></div><div style="padding:11px;background:var(--el-color-warning-light-9);border-radius:6px"><small>折让金额 · {{ formatUnitPrice(viewUnitPrice) }}</small><div style="font-size:17px;font-weight:650">{{ money(discountAmount) }}</div></div><div style="padding:11px;background:var(--el-color-success-light-9);border-radius:6px"><small>折后金额</small><div style="font-size:17px;font-weight:650">{{ money(afterAmount) }}</div></div></div>
+
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px"><div style="padding:11px;background:var(--el-fill-color-light);border-radius:6px"><small>原金额</small><div style="font-size:17px;font-weight:650">{{ money(originalAmount) }}</div></div><div style="padding:11px;background:var(--el-color-warning-light-9);border-radius:6px"><small>折让金额</small><div style="font-size:17px;font-weight:650">{{ money(discountAmount) }}</div></div><div style="padding:11px;background:var(--el-color-success-light-9);border-radius:6px"><small>折后金额</small><div style="font-size:17px;font-weight:650">{{ money(afterAmount) }}</div></div></div>
           </div>
         </section>
 
         <section class="panel table-panel flow-panel-shell" data-tour="settlement-detail-lines">
           <div class="panel-head"><div class="panel-title"><span class="bar"></span><span>行信息</span></div><span v-if="form.occupancyStatus === 'occupied'" style="font-size:12px;color:var(--el-text-color-secondary)">已占用，不能更新明细</span></div>
-          <div class="panel-body"><el-tabs v-model="detailTab"><el-tab-pane label="收货明细" name="receipts"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px"><span style="font-size:12px;color:var(--el-text-color-secondary)">当前按 {{ selectedSnapshot.version }} 的 {{ formatUnitPrice(viewUnitPrice) }} 展示</span><el-button type="primary" plain size="small" :disabled="form.occupancyStatus === 'occupied' || activeView === 'history'" @click="refreshReceiptLines"><i class="ri-refresh-line"></i><span>获取最新收货记录</span></el-button></div><div class="flow-grid-table-wrap"><el-table class="flow-grid-table" :data="viewLines" height="100%" min-height="230" stripe border style="width:100%">
-            <el-table-column prop="materialDoc" label="物料凭证" width="112"></el-table-column><el-table-column prop="item" label="行项目" width="76"></el-table-column><el-table-column prop="receiptDate" label="入库日期" width="108"></el-table-column><el-table-column prop="purchaseOrder" label="采购订单" width="112"></el-table-column><el-table-column prop="materialName" label="物料" min-width="180" show-overflow-tooltip></el-table-column><el-table-column prop="quantity" label="数量" width="100" align="right"><template v-slot:default="scope">{{ money(scope.row.quantity) }}</template></el-table-column><el-table-column prop="unitPrice" label="单价" width="94" align="right"><template v-slot:default="scope">{{ money(scope.row.unitPrice) }}</template></el-table-column><el-table-column prop="area" label="面积(m²)" width="108" align="right"><template v-slot:default="scope">{{ money(scope.row.area) }}</template></el-table-column><el-table-column prop="m2UntaxedPrice" label="原M²不含税单价" width="142" align="right"><template v-slot:default="scope">{{ money(scope.row.m2UntaxedPrice) }}</template></el-table-column><el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="160" align="right"><template v-slot:default="scope">{{ money(scope.row.discountUnitPrice) }}</template></el-table-column><el-table-column prop="amount" label="原金额" width="116" align="right"><template v-slot:default="scope">{{ money(scope.row.amount) }}</template></el-table-column><el-table-column prop="discountAmount" label="折让金额" width="116" align="right"><template v-slot:default="scope">{{ money(scope.row.discountAmount) }}</template></el-table-column><el-table-column prop="afterAmount" label="折后金额" width="116" align="right"><template v-slot:default="scope">{{ money(scope.row.afterAmount) }}</template></el-table-column>
-          </el-table></div><div class="table-footer"><span style="font-size:12px;color:var(--el-text-color-secondary)">共 {{ viewLines.length }} 条，负数数量与金额按原符号计算</span></div></el-tab-pane><el-tab-pane label="版本记录" name="versions"><el-table :data="history" size="small" stripe border style="width:100%"><el-table-column prop="version" label="版本" width="70"></el-table-column><el-table-column label="状态" width="90"><template v-slot:default="scope"><el-tag size="small" type="success">已同步</el-tag></template></el-table-column><el-table-column label="折让后M²不含税单价" width="100" align="right"><template v-slot:default="scope">{{ formatUnitPrice(scope.row.unitPrice) }}</template></el-table-column><el-table-column label="折让金额" width="120" align="right"><template v-slot:default="scope">{{ money(historyDiscount(scope.row)) }}</template></el-table-column><el-table-column label="折后金额" width="120" align="right"><template v-slot:default="scope">{{ money(historyAfter(scope.row)) }}</template></el-table-column><el-table-column prop="operator" label="提交人" width="90"></el-table-column><el-table-column prop="time" label="提交时间" width="145"></el-table-column><el-table-column label="SAP结果" min-width="150"><template v-slot:default="scope">同步成功</template></el-table-column><el-table-column label="操作" width="120" fixed="right"><template v-slot:default="scope"><el-button link type="primary" size="small" @click="viewSnapshot(scope.row)">查看完整快照</el-button></template></el-table-column></el-table></el-tab-pane></el-tabs></div>
+          <div class="panel-body"><el-tabs v-model="detailTab"><el-tab-pane label="收货明细" name="receipts"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px"><span style="font-size:12px;color:var(--el-text-color-secondary)">当前展示 {{ selectedSnapshot.version }} · 已选 {{ selectedRowKeys.length }} 条</span><div style="display:flex;gap:8px"><el-button size="small" :disabled="!selectedRowKeys.length || activeView !== 'current' || form.occupancyStatus === 'occupied'" @click="batchDialogOpen=true">批量维护折让后M²不含税单价</el-button><el-button type="primary" plain size="small" :disabled="form.occupancyStatus === 'occupied' || activeView === 'history'" @click="refreshReceiptLines"><i class="ri-refresh-line"></i><span>获取最新收货记录</span></el-button></div><div class="flow-grid-table-wrap"><el-table class="flow-grid-table" :data="viewLines" @selection-change="onSelectionChange" height="100%" min-height="230" stripe border style="width:100%">
+            <el-table-column type="selection" width="48" :selectable="() => activeView === 'current' && form.occupancyStatus !== 'occupied'"></el-table-column><el-table-column prop="materialDoc" label="物料凭证" width="112"></el-table-column><el-table-column prop="item" label="行项目" width="76"></el-table-column><el-table-column prop="receiptDate" label="入库日期" width="108"></el-table-column><el-table-column prop="purchaseOrder" label="采购订单" width="112"></el-table-column><el-table-column prop="materialName" label="物料" min-width="180" show-overflow-tooltip></el-table-column><el-table-column prop="quantity" label="数量" width="100" align="right"><template v-slot:default="scope">{{ money(scope.row.quantity) }}</template></el-table-column><el-table-column prop="unitPrice" label="单价" width="94" align="right"><template v-slot:default="scope">{{ money(scope.row.unitPrice) }}</template></el-table-column><el-table-column prop="area" label="面积(m²)" width="108" align="right"><template v-slot:default="scope">{{ money(scope.row.area) }}</template></el-table-column><el-table-column prop="m2UntaxedPrice" label="原M²不含税单价" width="142" align="right"><template v-slot:default="scope">{{ money(scope.row.m2UntaxedPrice) }}</template></el-table-column><el-table-column prop="discountUnitPrice" label="折让后M²不含税单价" width="205" align="right"><template v-slot:default="scope"><el-input-number v-if="activeView === 'current' && form.occupancyStatus !== 'occupied'" :model-value="scope.row.discountUnitPrice" @change="updateLinePrice(scope.row, $event)" :precision="4" :step="0.0001" controls-position="right" style="width:185px"></el-input-number><span v-else>{{ money(scope.row.discountUnitPrice) }}</span></template></el-table-column><el-table-column prop="amount" label="原金额" width="116" align="right"><template v-slot:default="scope">{{ money(scope.row.amount) }}</template></el-table-column><el-table-column prop="discountAmount" label="折让金额" width="116" align="right"><template v-slot:default="scope">{{ money(scope.row.discountAmount) }}</template></el-table-column><el-table-column prop="afterAmount" label="折后金额" width="116" align="right"><template v-slot:default="scope">{{ money(scope.row.afterAmount) }}</template></el-table-column>
+          </el-table></div><div class="table-footer"><span style="font-size:12px;color:var(--el-text-color-secondary)">共 {{ viewLines.length }} 条，负数数量与金额按原符号计算</span></div></el-tab-pane><el-tab-pane label="版本记录" name="versions"><el-table :data="history" size="small" stripe border style="width:100%"><el-table-column prop="version" label="版本" width="70"></el-table-column><el-table-column label="状态" width="90"><template v-slot:default="scope"><el-tag size="small" type="success">已同步</el-tag></template></el-table-column><el-table-column label="折让金额" width="120" align="right"><template v-slot:default="scope">{{ money(historyDiscount(scope.row)) }}</template></el-table-column><el-table-column label="折后金额" width="120" align="right"><template v-slot:default="scope">{{ money(historyAfter(scope.row)) }}</template></el-table-column><el-table-column prop="operator" label="提交人" width="90"></el-table-column><el-table-column prop="time" label="提交时间" width="145"></el-table-column><el-table-column label="SAP结果" min-width="150"><template v-slot:default="scope">同步成功</template></el-table-column><el-table-column label="操作" width="120" fixed="right"><template v-slot:default="scope"><el-button link type="primary" size="small" @click="viewSnapshot(scope.row)">查看完整快照</el-button></template></el-table-column></el-table></el-tab-pane></el-tabs></div>
         </section>
 
-        <section v-if="activeView !== 'history'" class="panel flow-panel-shell" data-tour="settlement-detail-actions"><div class="panel-body" style="display:flex;justify-content:flex-end;gap:8px"><el-button type="primary" :loading="submitting" @click="submitSap">重新提交SAP</el-button><el-button @click="saveEdit">保存编辑稿</el-button><el-button @click="backList">返回列表</el-button></div></section>
+        <section v-if="activeView !== 'history'" class="panel flow-panel-shell" data-tour="settlement-detail-actions"><div class="panel-body" style="display:flex;justify-content:flex-end;gap:8px"><el-button type="primary" :loading="submitting" @click="submitSap">重新提交SAP</el-button><el-button @click="saveEdit">保存编辑稿</el-button><el-button @click="backList">返回列表</el-button></div><el-dialog v-model="batchDialogOpen" title="批量维护折让后M²不含税单价" width="420px"><el-form label-width="145px"><el-form-item label="已选明细数"><span>{{ selectedRowKeys.length }} 条</span></el-form-item><el-form-item label="折让后M²不含税单价"><el-input-number v-model="batchUnitPrice" :precision="4" :step="0.0001" style="width:100%"></el-input-number></el-form-item></el-form><template v-slot:footer><el-button @click="batchDialogOpen=false">取消</el-button><el-button type="primary" @click="applyBatchUnitPrice">确定</el-button></template></el-dialog>
       </div>
     `
   });
